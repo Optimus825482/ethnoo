@@ -7,8 +7,9 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Hotel internal buggy/shuttle call management system",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#3B82F6",
+    orientation: "portrait",
+    background_color: "#1a2b4a",
+    theme_color: "#1a2b4a",
     icons: [
       { src: "/icons/Icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/Icon-512.png", sizes: "512x512", type: "image/png" },

@@ -131,7 +131,10 @@ export default function GuestStatusPage() {
     iso ? new Date(iso).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50">
+    <div
+      className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50"
+      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       <div className="w-full max-w-[540px]">
         {/* Status Icon + Title */}
         <div className="text-center mb-6" style={{ animation: "fadeInDown 0.6s ease-out" }}>

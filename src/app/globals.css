@@ -158,3 +158,20 @@
 @keyframes ripple {
   to { width: 300px; height: 300px; opacity: 0; }
 }
+
+/* PWA — prevent text size adjust + smooth scroll + disable tap highlight */
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+/* Prevent overscroll bounce on mobile */
+body {
+  overscroll-behavior: none;
+}
+
+/* Disable input zoom on iOS — font-size >= 16px */
+input, textarea, select {
+  font-size: 16px;
+}
