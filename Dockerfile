@@ -4,8 +4,8 @@ FROM node:22-alpine AS base
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-RUN corepack enable pnpm && pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
 # Build
 FROM base AS builder
