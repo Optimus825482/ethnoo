@@ -46,7 +46,7 @@ export const POST = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     // Write file
     fs.writeFileSync(path.join(process.cwd(), filePath), buffer);
 
-    const logoUrl = `/images/locations/${filename}`;
+    const logoUrl = `/api/uploads/images/locations/${filename}`;
 
     // Update DB
     await prisma.location.update({

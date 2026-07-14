@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   headers: () =>
     securityHeaders.map((h) => ({ source: "/(.*)", headers: [h] })),
+  async rewrites() {
+    return [
+      {
+        source: "/images/locations/:filename",
+        destination: "/api/uploads/images/locations/:filename",
+      },
+    ];
+  },
 };
 
 export default nextConfig;
