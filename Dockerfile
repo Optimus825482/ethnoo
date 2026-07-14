@@ -5,7 +5,7 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json pnpm-lock.yaml .npmrc ./
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+RUN npm install -g pnpm@10 && pnpm install --frozen-lockfile
 
 # Build
 FROM base AS builder
@@ -17,7 +17,7 @@ COPY . .
 RUN npx prisma generate
 
 # Build Next.js
-RUN corepack enable pnpm && pnpm build
+RUN npm install -g pnpm@10 && pnpm build
 
 # Production
 FROM node:22-alpine AS runner
