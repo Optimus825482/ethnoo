@@ -48,7 +48,7 @@ export default function ReportsPage() {
           <CardTitle className="text-lg">Tarih Aralığı</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
             <div className="space-y-2">
               <Label htmlFor="from">Başlangıç</Label>
               <Input id="from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />

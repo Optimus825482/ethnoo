@@ -19,27 +19,26 @@ export default async function DriverLayout({ children }: { children: React.React
   if (json.data?.user?.role !== "DRIVER") redirect("/admin/dashboard");
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img src="/images/logo.png" alt="ShuttleCall" className="h-7 w-auto" />
-          <div>
+    <div className="flex min-h-[100dvh] flex-col" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+      <header className="border-b border-border bg-card px-4 py-3 flex items-center justify-between sticky top-0 z-20">
+        <div className="flex items-center gap-3 min-w-0">
+          <img src="/images/logo.png" alt="ShuttleCall" className="h-7 w-auto shrink-0" />
+          <div className="min-w-0">
             <h1 className="font-bold text-sm text-foreground leading-tight">ShuttleCall</h1>
-            <p className="text-[10px] text-muted-foreground">Driver: {json.data.user.fullName}</p>
+            <p className="text-xs text-muted-foreground truncate">{json.data.user.fullName}</p>
           </div>
         </div>
         <form action="/api/auth/logout" method="POST">
           <Button
             type="submit"
             variant="ghost"
-            size="sm"
-            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
           >
-            <LogOut className="w-4 h-4" /> Logout
+            <LogOut className="w-5 h-5" /> <span className="hidden sm:inline">Çıkış</span>
           </Button>
         </form>
       </header>
-      <main className="flex-1 overflow-auto p-4 max-w-2xl mx-auto w-full">{children}</main>
+      <main className="flex-1 overflow-auto p-4 max-w-2xl mx-auto w-full" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>{children}</main>
     </div>
   );
 }

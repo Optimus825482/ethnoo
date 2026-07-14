@@ -94,7 +94,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Kullanıcılar</h1>
         <Button onClick={() => setShowDialog(true)}>
           <Plus className="w-4 h-4 mr-1" /> Kullanıcı Ekle

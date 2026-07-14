@@ -213,19 +213,19 @@ export default function DriverDashboard() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">Sürücü Paneli</h1>
         {driverLocation && (() => {
           const loc = locations.find((l) => String(l.id) === driverLocation);
           return (
-            <Button size="sm" variant="outline" onClick={changeLocation}>
+            <Button variant="outline" onClick={changeLocation} className="max-w-[60vw]">
               {loc?.logo ? (
-                <img src={loc.logo} alt="" className="w-4 h-4 rounded object-cover" />
+                <img src={loc.logo} alt="" className="w-4 h-4 rounded object-cover shrink-0" />
               ) : (
-                <MapPin className="w-3.5 h-3.5" />
+                <MapPin className="w-4 h-4 shrink-0" />
               )}
-              {loc?.name || "Konum"}
-              <span className="ml-1 text-xs text-muted-foreground">(değiştir)</span>
+              <span className="truncate">{loc?.name || "Konum"}</span>
+              <span className="ml-1 text-xs text-muted-foreground shrink-0">(değiştir)</span>
             </Button>
           );
         })()}
@@ -254,9 +254,8 @@ export default function DriverDashboard() {
               {active.phone && <p className="text-sm">Telefon: {active.phone}</p>}
               {active.notes && <p className="text-sm text-muted-foreground">Not: {active.notes}</p>}
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button className="flex-1" onClick={() => {
-                // Load locations for dropoff selection
                 fetch("/api/locations")
                   .then((r) => r.json())
                   .then((json) => {
@@ -266,10 +265,10 @@ export default function DriverDashboard() {
                     }
                   });
               }}>
-                <CheckCircle className="w-4 h-4 mr-1" /> Görev Tamamlandı
+                <CheckCircle className="w-4 h-4 mr-1" /> <span className="text-sm sm:text-base">Görev Tamamlandı</span>
               </Button>
-              <Button variant="destructive" onClick={() => cancelRequest(active.id)}>
-                <XCircle className="w-4 h-4 mr-1" /> İptal
+              <Button variant="destructive" className="flex-1 sm:flex-none" onClick={() => cancelRequest(active.id)}>
+                <XCircle className="w-4 h-4 mr-1" /> <span className="text-sm sm:text-base">İptal</span>
               </Button>
             </div>
           </CardContent>

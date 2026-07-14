@@ -133,7 +133,7 @@ export default function AdminDashboard() {
                   "border-l-red-400"
                 }`}>
                   <CardContent className="p-3 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{b.icon || "🚗"}</span>
                         <span className="font-semibold">{b.code}</span>

@@ -10,12 +10,15 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     background_color: "#1a2b4a",
     theme_color: "#1a2b4a",
+    categories: ["business", "productivity"],
     icons: [
-      { src: "/icons/Icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icons/Icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icons/Icon-1024.png", sizes: "1024x1024", type: "image/png" },
+      { src: "/icons/Icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/Icon-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icons/Icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icons/Icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
       { src: "/icons/Icon-144.png", sizes: "144x144", type: "image/png" },
       { src: "/icons/Icon-152.png", sizes: "152x152", type: "image/png" },
+      { src: "/icons/Icon-1024.png", sizes: "1024x1024", type: "image/png" },
     ],
   };
 }
