@@ -1,0 +1,54 @@
+services:
+  # ── Postgres in same container group ──
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shuttlecall
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-shuttlecall_pass_change_me}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── ShuttleCall app ──
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3016}:3016"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-shuttlecall_pass_change_me}@db:5432/shuttlecall?schema=public"
+
+      # Auth
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-shuttlecall-dev-secret-change-in-production-32chars}"
+      NEXTAUTH_URL: "${NEXTAUTH_URL:-https://shuttle.erkanerdem.online}"
+
+      # App
+      NEXT_PUBLIC_APP_NAME: "${NEXT_PUBLIC_APP_NAME:-ShuttleCall}"
+      NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-https://shuttle.erkanerdem.online}"
+      NODE_ENV: production
+
+      # Firebase (FCM) — defaults from project
+      FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:-shuttlecall-44dd8}"
+      FIREBASE_CLIENT_EMAIL: "${FIREBASE_CLIENT_EMAIL:-firebase-adminsdk-fbsvc@shuttlecall-44dd8.iam.gserviceaccount.com}"
+      FIREBASE_PRIVATE_KEY: "${FIREBASE_PRIVATE_KEY}"
+
+      # Web Push (VAPID)
+      VAPID_PUBLIC_KEY: "${VAPID_PUBLIC_KEY:-BNHTeNNDT9nyGap4mQIjsU-gO5qRtjYAHzI9uXZSdOUWvp-_9d5HhSDYHWDFaFUOn0QsmAhyC2xOJt4BWglvZqg}"
+      VAPID_PRIVATE_KEY: "${VAPID_PRIVATE_KEY:-y659BsZ5DOjWuUIHVTe4nxxHMBezODSGC-pEhKfbyHQ}"
+      VAPID_CONTACT_EMAIL: "${VAPID_CONTACT_EMAIL:-mailto:admin@shuttlecall.com}"
+    volumes:
+      - uploads:/app/public/images/locations
+
+volumes:
+  pgdata:
+  uploads:

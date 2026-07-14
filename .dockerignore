@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.env.*.local
+nul
+*.md
+tests
+vitest.config.ts
+vitest.frontend.config.ts
+coverage
+.npm
+.DS_Store
