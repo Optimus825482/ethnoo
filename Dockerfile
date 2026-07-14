@@ -16,7 +16,8 @@ COPY . .
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build Next.js
+# Build Next.js — dummy DATABASE_URL for build-time route collection
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npm install -g pnpm@10 && pnpm build
 
 # Production
