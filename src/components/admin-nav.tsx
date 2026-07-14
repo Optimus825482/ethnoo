@@ -69,11 +69,13 @@ export function AdminNav({ user }: { user: { fullName: string } }) {
       {/* Mobile top bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-card border-b border-border flex items-center px-4">
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="p-2">
-              <Menu className="w-6 h-6" />
-            </Button>
-          </SheetTrigger>
+          <SheetTrigger
+            render={
+              <Button variant="ghost" size="sm" className="p-2">
+                <Menu className="w-6 h-6" />
+              </Button>
+            }
+          />
           <SheetContent side="left" className="w-72 p-0">
             <SidebarContent user={user} pathname={pathname} />
           </SheetContent>
