@@ -8,14 +8,14 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   const dateFrom = url.searchParams.get("dateFrom");
   const dateTo = url.searchParams.get("dateTo");
 
-  if (!dateFrom || !dateTo) {
-    return apiSuccess({ error: "dateFrom and dateTo required" }, 400);
-  }
+  // Default: last 30 days if no range
+  const from = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const to = dateTo ? new Date(dateTo) : new Date();
 
   const perf = await ReportService.getPerformance(
     ctx.user!.hotelId,
-    new Date(dateFrom),
-    new Date(dateTo),
+    from,
+    to,
   );
   return apiSuccess(perf);
 }));
