@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: shuttlecall
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: shuttlecall_pass
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -17,26 +17,47 @@ services:
   app:
     build: .
     restart: unless-stopped
-    ports:
-      - "3016:3016"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: "postgresql://postgres:shuttlecall_pass@db:5432/shuttlecall?schema=public"
-      NEXTAUTH_SECRET: "shuttlecall-dev-secret-change-in-production-32chars"
-      NEXTAUTH_URL: "https://shuttle.erkanerdem.online"
+      DATABASE_URL: "postgresql://postgres:${DB_PASSWORD}@db:5432/shuttlecall?schema=public"
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: "https://shuttlecall.com"
       NEXT_PUBLIC_APP_NAME: "ShuttleCall"
-      NEXT_PUBLIC_APP_URL: "https://shuttle.erkanerdem.online"
+      NEXT_PUBLIC_APP_URL: "https://shuttlecall.com"
       NODE_ENV: "production"
-      FIREBASE_PROJECT_ID: "shuttlecall-44dd8"
-      FIREBASE_CLIENT_EMAIL: "firebase-adminsdk-fbsvc@shuttlecall-44dd8.iam.gserviceaccount.com"
-      FIREBASE_PRIVATE_KEY: ""
-      VAPID_PUBLIC_KEY: "BNHTeNNDT9nyGap4mQIjsU-gO5qRtjYAHzI9uXZSdOUWvp-_9d5HhSDYHWDFaFUOn0QsmAhyC2xOJt4BWglvZqg"
-      VAPID_PRIVATE_KEY: "y659BsZ5DOjWuUIHVTe4nxxHMBezODSGC-pEhKfbyHQ"
-      VAPID_CONTACT_EMAIL: "mailto:admin@shuttlecall.com"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_CONTACT_EMAIL: ${VAPID_CONTACT_EMAIL}
     volumes:
       - uploads:/app/public/images/locations
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      # HTTPS router
+      - "traefik.http.routers.shuttlecall.rule=Host(`shuttlecall.com`)"
+      - "traefik.http.routers.shuttlecall.entrypoints=https"
+      - "traefik.http.routers.shuttlecall.tls=true"
+      - "traefik.http.routers.shuttlecall.tls.certresolver=letsencrypt"
+      - "traefik.http.services.shuttlecall.loadbalancer.server.port=3016"
+      # HTTP → HTTPS redirect
+      - "traefik.http.routers.shuttlecall-http.rule=Host(`shuttlecall.com`)"
+      - "traefik.http.routers.shuttlecall-http.entrypoints=http"
+      - "traefik.http.routers.shuttlecall-http.middlewares=shuttlecall-redirect"
+      - "traefik.http.middlewares.shuttlecall-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.shuttlecall-redirect.redirectscheme.permanent=true"
+
+networks:
+  coolify:
+    external: true
+  default:
 
 volumes:
   pgdata:
