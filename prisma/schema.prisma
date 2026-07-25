@@ -119,6 +119,8 @@ model Location {
   logo         String?  @db.Text
   latitude     Decimal? @db.Decimal(10, 8)
   longitude    Decimal? @db.Decimal(11, 8)
+  mapX         Int?     @map("map_x")
+  mapY         Int?     @map("map_y")
   displayOrder Int      @default(0) @map("display_order")
   qrCodeData   String?  @map("qr_code_data") @db.VarChar(500)
   qrCodePath   String?  @map("qr_code_path") @db.VarChar(500)
