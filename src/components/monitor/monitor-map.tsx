@@ -45,18 +45,28 @@ function BuggyMarker({ x, y, buggy, selected, onClick }: {
 }) {
   const color = BUGGY_COLORS[buggy.status];
   const faded = buggy.status === "OFFLINE" || buggy.status === "MAINTENANCE";
+  const label = buggy.code.startsWith("B") ? buggy.code.slice(1) : buggy.code;
+  const iconW = 52, iconH = 26;
   return (
-    <g transform={`translate(${x},${y})`} style={{ cursor: "pointer" }} onClick={onClick}
+    <g transform={`translate(${x - iconW/2},${y - iconH - 2})`}
+       style={{ cursor: "pointer" }} onClick={onClick}
        opacity={faded ? 0.55 : 1} data-testid={`buggy-${buggy.code}`} data-status={buggy.status}>
-      {selected && <circle r="20" fill="none" stroke={color} strokeWidth="2.5" className="mon-sel-ring" />}
-      <rect x="-16" y="-11" width="32" height="20" rx="6" fill="#0e241a" stroke={color} strokeWidth="2.5" />
-      <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="Space Grotesk, sans-serif"
-            fontWeight="700" fontSize="10" fill="#fff">{buggy.code}</text>
-      <circle cx="13" cy="-8" r="4" fill={color} stroke="#0e241a" strokeWidth="1.5" />
+      {selected && <circle cx={iconW/2} cy={iconH + 6} r="24" fill="none" stroke={color} strokeWidth="2.5" className="mon-sel-ring" />}
+      {/* gölge */}
+      <ellipse cx={iconW/2} cy={iconH + 9} rx="22" ry="4" fill="rgba(0,0,0,.25)" />
+      {/* golf buggy ikonu */}
+      <use href="#buggy-icon" width={iconW} height={iconH} stroke={color} strokeWidth="1.5" />
+      {/* büyük kod numarası — gövde üstünde */}
+      <text x={iconW/2} y={iconH/2 + 1} textAnchor="middle" dominantBaseline="central"
+            fontFamily="Space Grotesk, sans-serif" fontWeight="800" fontSize="12" fill="#fff"
+            stroke="#0e241a" strokeWidth="3" paintOrder="stroke">{label}</text>
+      {/* durum ışığı — sağ üst */}
+      <circle cx={iconW - 5} cy="3" r="4" fill={color} stroke="#0e241a" strokeWidth="1.2" />
+      {/* GPS mavi pulse — sol üst */}
       {buggy.gpsLat != null && buggy.gpsLng != null && (
-        <circle cx="-13" cy="-8" r="4" fill="#3b82f6" stroke="#0e241a" strokeWidth="1.5" className="mon-call-pulse" />
+        <circle cx="5" cy="3" r="4" fill="#3b82f6" stroke="#0e241a" strokeWidth="1.2" className="mon-call-pulse" />
       )}
-      <title>{`${buggy.code} · ${buggy.status}${buggy.gpsLat ? " · GPS canlı" : ""}`}</title>
+      <title>{`${buggy.code} · ${buggy.status}${buggy.gpsLat ? " · GPS canli" : ""}`}</title>
     </g>
   );
 }
@@ -144,6 +154,31 @@ export function MonitorMap({ locations, buggies, calls, selection, onSelect }: {
           <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
           <clipPath id="seaClip"><rect x="0" y="636" width="1200" height="184"/></clipPath>
           <clipPath id="isleClip"><rect x="22" y="22" width="1156" height="612" rx="58"/></clipPath>
+          {/* golf buggy ikonu */}
+          <symbol id="buggy-icon" viewBox="0 0 320 135">
+            {/* arka tekerlek */}
+            <circle cx="60" cy="130" r="28" fill="#2b2b2b"/>
+            <circle cx="60" cy="130" r="12" fill="#9aa5a8"/>
+            {/* ön tekerlek */}
+            <circle cx="260" cy="130" r="28" fill="#2b2b2b"/>
+            <circle cx="260" cy="130" r="12" fill="#9aa5a8"/>
+            {/* gövde (alt) — yeşil */}
+            <path d="M0 110 L30 70 L290 70 L320 110 L320 130 L0 130 Z" fill="#2f8f7a" stroke="currentColor" stroke-width="3"/>
+            {/* tavan — kırmızı */}
+            <path d="M10 0 Q160 -35 310 0 L310 10 Q160 -22 10 10 Z" fill="#e05a4e" stroke="currentColor" stroke-width="3"/>
+            {/* ön cam — mavi */}
+            <path d="M290 70 L310 70 L320 105 L290 105 Z" fill="#bcdff0" opacity="0.9"/>
+            {/* arka koltuk */}
+            <rect x="50" y="70" width="55" height="12" fill="#1f2f33"/>
+            {/* ön koltuk */}
+            <rect x="170" y="70" width="55" height="12" fill="#1f2f33"/>
+            {/* arka kutu */}
+            <rect x="300" y="100" width="18" height="22" rx="3" fill="#24473f"/>
+            {/* ön far */}
+            <circle cx="308" cy="93" r="5" fill="#fff4c2"/>
+            {/* kod label bölgesi (sayı overlay'i için arka plan) */}
+            <rect x="100" y="80" width="120" height="18" rx="4" fill="#0e241a" opacity="0.65"/>
+          </symbol>
         </defs>
 
         {/* statik zemin + rota */}
