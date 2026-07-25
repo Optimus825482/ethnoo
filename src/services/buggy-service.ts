@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api-response";
 import { logAudit } from "@/lib/audit";
+import { publishSSE } from "@/lib/event-bus";
 import { Prisma, BuggyStatus } from "@prisma/client";
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
@@ -166,6 +167,8 @@ export const BuggyService = {
       oldValues: { status: existing.status },
       newValues: { status: buggy.status },
     });
+
+    publishSSE(`hotel:${hotelId}`, { type: "buggy_status", buggyId: id, status: buggy.status });
 
     return buggy;
   },
