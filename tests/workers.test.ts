@@ -23,7 +23,7 @@ describe("worker cron registrations", () => {
     // Import to trigger cron registration
     await import("@/workers/index");
 
-    expect(mockSchedule).toHaveBeenCalledTimes(3);
+    expect(mockSchedule).toHaveBeenCalledTimes(4);
 
     // Check schedules
     const schedules = mockSchedule.mock.calls.map((c: unknown[]) => c[0]);

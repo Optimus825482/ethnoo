@@ -44,6 +44,15 @@ describe("MonitorService.getState", () => {
       },
     });
 
+    // Set driver status to ON_DUTY with recent heartbeat so buggy shows as AVAILABLE
+    await prisma.user.update({
+      where: { id: testDriver.id },
+      data: {
+        driverStatus: "ON_DUTY",
+        lastHeartbeat: new Date(),
+      },
+    });
+
     testBuggy = await prisma.buggy.create({
       data: {
         hotelId: hotel.hotel.id,

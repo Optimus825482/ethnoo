@@ -50,11 +50,11 @@ describe("getVapidPublicKey", () => {
 });
 
 describe("saveFcmToken", () => {
-  it("updates user fcmToken and fcmTokenDate", async () => {
+  it("updates user pushSubscription (FCM token ignored)", async () => {
     const hotel = await prisma.hotel.create({
       data: {
-        code: `FCM${Date.now()}`,
-        name: "FCM Test Hotel",
+        code: `PUSH${Date.now()}`,
+        name: "Push Hotel",
         timezone: "UTC",
         isActive: true,
         setupCompleted: true,
@@ -64,19 +64,18 @@ describe("saveFcmToken", () => {
     const user = await prisma.user.create({
       data: {
         hotelId: hotel.id,
-        username: `fcm-test-${Date.now()}`,
+        username: `push-test-${Date.now()}`,
         passwordHash: "hash",
         role: "DRIVER",
-        fullName: "FCM Test",
+        fullName: "Push Test",
         isActive: true,
       },
     });
 
-    await saveFcmToken(user.id, "test-fcm-token");
+    await saveFcmToken(user.id, "unused-fcm-token", '{"endpoint":"https://push.test"}');
 
     const updated = await prisma.user.findUnique({ where: { id: user.id } });
-    expect(updated?.fcmToken).toBe("test-fcm-token");
-    expect(updated?.fcmTokenDate).toBeInstanceOf(Date);
+    expect(updated?.pushSubscription).toBe('{"endpoint":"https://push.test"}');
 
     await prisma.user.delete({ where: { id: user.id } });
     await prisma.hotel.delete({ where: { id: hotel.id } });

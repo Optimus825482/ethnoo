@@ -71,10 +71,9 @@ describe("LoginPage", () => {
     expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
   });
 
-  it("shows demo credentials text", async () => {
+  it("does not show demo credentials in production", async () => {
     await renderAndWaitForForm();
-    expect(screen.getByText(/Demo credentials/i)).toBeInTheDocument();
-    expect(screen.getByText(/admin \/ admin123/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Demo credentials/i)).not.toBeInTheDocument();
   });
 
   it("calls /api/auth/login on submit with valid data", async () => {
