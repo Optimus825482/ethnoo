@@ -49,7 +49,7 @@ export const LocationService = {
 
   async create(
     hotelId: number,
-    data: { name: string; description?: string; logo?: string; latitude?: number; longitude?: number; displayOrder?: number; isActive?: boolean },
+    data: { name: string; description?: string; logo?: string; latitude?: number; longitude?: number; mapX?: number; mapY?: number; displayOrder?: number; isActive?: boolean },
     userId?: number,
   ) {
     const location = await prisma.location.create({
@@ -60,6 +60,8 @@ export const LocationService = {
         logo: data.logo,
         latitude: data.latitude,
         longitude: data.longitude,
+        mapX: data.mapX,
+        mapY: data.mapY,
         displayOrder: data.displayOrder ?? 0,
         isActive: data.isActive ?? true,
       },
@@ -80,7 +82,7 @@ export const LocationService = {
   async update(
     hotelId: number,
     id: number,
-    data: Partial<{ name: string; description: string; logo: string | null; latitude: number; longitude: number; displayOrder: number; isActive: boolean }>,
+    data: Partial<{ name: string; description: string; logo: string | null; latitude: number; longitude: number; mapX: number | null; mapY: number | null; displayOrder: number; isActive: boolean }>,
     userId?: number,
   ) {
     const existing = await this.getById(hotelId, id);

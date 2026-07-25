@@ -381,3 +381,21 @@ describe("userQuerySchema", () => {
     }
   });
 });
+
+describe("location map coordinates", () => {
+  it("createLocationSchema accepts mapX/mapY", () => {
+    const r = createLocationSchema.safeParse({ name: "Aquapark", mapX: 150, mapY: 362 });
+    expect(r.success).toBe(true);
+    if (r.success) { expect(r.data.mapX).toBe(150); expect(r.data.mapY).toBe(362); }
+  });
+
+  it("createLocationSchema rejects out-of-viewbox coordinates", () => {
+    expect(createLocationSchema.safeParse({ name: "X", mapX: -1 }).success).toBe(false);
+    expect(createLocationSchema.safeParse({ name: "X", mapY: 821 }).success).toBe(false);
+  });
+
+  it("updateLocationSchema accepts nullable mapX/mapY (konum haritadan kaldırma)", () => {
+    const r = updateLocationSchema.safeParse({ mapX: null, mapY: null });
+    expect(r.success).toBe(true);
+  });
+});
