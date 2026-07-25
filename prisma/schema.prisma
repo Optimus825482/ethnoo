@@ -11,6 +11,11 @@ enum UserRole {
   DRIVER
 }
 
+enum DriverStatus {
+  ON_DUTY
+  OFF_DUTY
+}
+
 enum BuggyStatus {
   AVAILABLE
   BUSY
@@ -95,6 +100,11 @@ model User {
   fcmToken           String?   @map("fcm_token") @db.VarChar(500)
   fcmTokenDate       DateTime? @map("fcm_token_date")
   pushSubscription   String?   @map("push_subscription") @db.Text
+  driverStatus      DriverStatus @default(ON_DUTY) @map("driver_status")
+  lastHeartbeat     DateTime? @map("last_heartbeat")
+  lastGpsLat        Float?    @map("last_gps_lat")
+  lastGpsLng        Float?    @map("last_gps_lng")
+  lastGpsAt         DateTime? @map("last_gps_at")
   lastLogin          DateTime? @map("last_login")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
@@ -108,6 +118,7 @@ model User {
   @@index([hotelId])
   @@index([role])
   @@index([isActive])
+  @@index([driverStatus])
   @@map("users")
 }
 
