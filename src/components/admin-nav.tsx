@@ -6,15 +6,18 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LayoutDashboard, Car, MapPin, Users, BarChart3, FileText, LogOut, Menu } from "lucide-react";
+import { LayoutDashboard, Car, MapPin, Users, BarChart3, FileText, Settings, PlayCircle, LogOut, Menu, Monitor } from "lucide-react";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Panel", icon: LayoutDashboard },
+  { href: "/admin/monitor", label: "Canlı Harita", icon: Monitor },
   { href: "/admin/buggies", label: "Araçlar", icon: Car },
   { href: "/admin/locations", label: "Konumlar", icon: MapPin },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
+  { href: "/admin/simulate", label: "Simülasyon", icon: PlayCircle },
   { href: "/admin/reports", label: "Raporlar", icon: BarChart3 },
   { href: "/admin/audit", label: "Denetim", icon: FileText },
+  { href: "/admin/settings", label: "Ayarlar", icon: Settings },
 ];
 
 function SidebarContent({ user, pathname }: { user: { fullName: string }; pathname: string }) {
