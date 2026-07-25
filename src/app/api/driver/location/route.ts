@@ -35,6 +35,13 @@ export const POST = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
       data: { currentLocationId: locationId },
     });
 
+    const { publishSSE } = await import("@/lib/event-bus");
+    publishSSE(`hotel:${assignment.buggy.hotelId}`, {
+      type: "buggy_location",
+      buggyId: assignment.buggy.id,
+      locationId,
+    });
+
     // Get location name for response
     const location = await prisma.location.findUnique({
       where: { id: locationId },
