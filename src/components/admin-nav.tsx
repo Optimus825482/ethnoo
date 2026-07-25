@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +21,9 @@ const navItems = [
 ];
 
 function SidebarContent({ user, pathname }: { user: { fullName: string }; pathname: string }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b border-border flex items-center gap-3">
@@ -36,7 +39,7 @@ function SidebarContent({ user, pathname }: { user: { fullName: string }; pathna
             key={item.href}
             href={item.href}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-              pathname.startsWith(item.href)
+              mounted && pathname.startsWith(item.href)
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
