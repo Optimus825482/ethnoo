@@ -8,6 +8,8 @@ export interface MapBuggy {
   id: number; code: string; icon: string | null;
   status: "AVAILABLE" | "BUSY" | "OFFLINE" | "MAINTENANCE";
   currentLocationId: number | null;
+  gpsLat?: number | null;
+  gpsLng?: number | null;
 }
 export interface MapCall {
   id: number; status: "PENDING" | "ACCEPTED"; locationId: number; buggyId: number | null;
@@ -51,7 +53,10 @@ function BuggyMarker({ x, y, buggy, selected, onClick }: {
       <text x="0" y="0" textAnchor="middle" dominantBaseline="central" fontFamily="Space Grotesk, sans-serif"
             fontWeight="700" fontSize="10" fill="#fff">{buggy.code}</text>
       <circle cx="13" cy="-8" r="4" fill={color} stroke="#0e241a" strokeWidth="1.5" />
-      <title>{`${buggy.code} · ${buggy.status}`}</title>
+      {buggy.gpsLat != null && buggy.gpsLng != null && (
+        <circle cx="-13" cy="-8" r="4" fill="#3b82f6" stroke="#0e241a" strokeWidth="1.5" className="mon-call-pulse" />
+      )}
+      <title>{`${buggy.code} · ${buggy.status}${buggy.gpsLat ? " · GPS canlı" : ""}`}</title>
     </g>
   );
 }

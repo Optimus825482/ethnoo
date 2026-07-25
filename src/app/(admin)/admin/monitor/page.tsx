@@ -155,7 +155,9 @@ export default function MonitorPage() {
                       <Badge variant="default">{statusTr[b.status]}</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {b.drivers[0]?.fullName || "Sofor yok"} · {b.currentLocationId ? locName.get(b.currentLocationId) || "?" : "konum bilinmiyor"}
+                      {b.drivers[0]?.fullName || "Sofor yok"}
+                      {b.drivers[0]?.driverStatus === "OFF_DUTY" && " · Servis Disi"}
+                      {b.gpsLat && b.gpsLng ? " · 📍 GPS canli" : ` · ${b.currentLocationId ? locName.get(b.currentLocationId) || "?" : "konum bilinmiyor"}`}
                     </div>
                   </button>
                 ))}

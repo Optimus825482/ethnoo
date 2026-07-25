@@ -28,6 +28,11 @@ export const MonitorService = {
                   id: true,
                   fullName: true,
                   lastLogin: true,
+                  driverStatus: true,
+                  lastGpsLat: true,
+                  lastGpsLng: true,
+                  lastGpsAt: true,
+                  lastHeartbeat: true,
                   sessions: {
                     where: { isActive: true, expiresAt: { gt: now }, revokedAt: null },
                     select: { id: true },
@@ -58,17 +63,30 @@ export const MonitorService = {
       }),
     ]);
 
-    // Her buggy için şoförlerden en az biri aktif oturuma sahip mi kontrol et
+    // Her buggy için şoförlerden en az biri ON_DUTY + heartbeat canlı mı kontrol et
+    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
     const buggies = buggiesRaw.map((b) => {
       const drivers = b.drivers.map((d) => ({
         id: d.driver.id,
         fullName: d.driver.fullName,
+        driverStatus: d.driver.driverStatus,
+        lastGpsLat: d.driver.lastGpsLat,
+        lastGpsLng: d.driver.lastGpsLng,
+        lastGpsAt: d.driver.lastGpsAt,
+        lastHeartbeat: d.driver.lastHeartbeat,
         loggedIn: d.driver.sessions.length > 0,
       }));
 
-      // Bir araç müsait sayılır: status=AVAILABLE VE en az bir şoför giriş yapmış
-      const driverLoggedIn = drivers.some((d) => d.loggedIn);
-      const effectiveStatus = b.status === "AVAILABLE" && !driverLoggedIn ? "OFFLINE" : b.status;
+      // Bir araç müsait sayılır: status=AVAILABLE VE en az bir şoför ON_DUTY + heartbeat canlı
+      const hasActiveDriver = drivers.some(
+        (d) => d.loggedIn && d.driverStatus === "ON_DUTY" && d.lastHeartbeat && d.lastHeartbeat > fiveMinAgo
+      );
+      const effectiveStatus = b.status === "AVAILABLE" && !hasActiveDriver ? "OFFLINE" : b.status;
+
+      // GPS konumu: en güncel şoförün GPS'i (son 2 dk)
+      const gpsDriver = drivers.find(
+        (d) => d.lastGpsLat != null && d.lastGpsAt && d.lastGpsAt > new Date(Date.now() - 2 * 60 * 1000)
+      );
 
       return {
         id: b.id,
@@ -77,7 +95,10 @@ export const MonitorService = {
         status: effectiveStatus,
         currentLocationId: b.currentLocationId,
         drivers,
-        driverLoggedIn,
+        driverLoggedIn: hasActiveDriver,
+        gpsLat: gpsDriver?.lastGpsLat ?? null,
+        gpsLng: gpsDriver?.lastGpsLng ?? null,
+        gpsAt: gpsDriver?.lastGpsAt ?? null,
       };
     });
 
