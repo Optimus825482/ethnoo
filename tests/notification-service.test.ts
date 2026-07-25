@@ -32,7 +32,6 @@ import {
   getVapidPublicKey,
   saveFcmToken,
   sendToDrivers,
-  sendToGuest,
 } from "@/services/notification-service";
 
 describe("getVapidPublicKey", () => {
@@ -184,16 +183,3 @@ describe("sendToDrivers", () => {
   });
 });
 
-describe("sendToGuest", () => {
-  it("handles null token gracefully (returns early)", async () => {
-    await expect(
-      sendToGuest(1, null, { title: "Test", body: "Body" }),
-    ).resolves.toBeUndefined();
-  });
-
-  it("handles undefined token gracefully (returns early)", async () => {
-    await expect(
-      sendToGuest(1, undefined, { title: "Test", body: "Body" }),
-    ).resolves.toBeUndefined();
-  });
-});

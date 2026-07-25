@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api-response";
 import { logAudit } from "@/lib/audit";
 import { publishSSE } from "@/lib/event-bus";
-import { sendToDrivers, sendToGuest } from "@/services/notification-service";
+import { sendToDrivers } from "@/services/notification-service";
 import { Prisma } from "@prisma/client";
 
 export const RequestService = {
@@ -155,13 +155,6 @@ export const RequestService = {
   },
 
   async accept(hotelId: number, requestId: number, driverId: number) {
-    // Get guest FCM token before transaction
-    const existingRequest = await prisma.buggyRequest.findUnique({
-      where: { id: requestId },
-      select: { guestFcmToken: true },
-    });
-    const guestFcmToken = existingRequest?.guestFcmToken;
-
     const result = await prisma.$transaction(async (tx) => {
       const requests = await tx.$queryRaw<Array<{ id: number; status: string; hotel_id: number }>>`
         SELECT id, status, hotel_id FROM buggy_requests WHERE id = ${requestId} FOR UPDATE
@@ -220,14 +213,6 @@ export const RequestService = {
 
     publishSSE(`request:${requestId}`, { type: "request_accepted", requestId, driverId });
     publishSSE(`hotel:${hotelId}`, { type: "request_accepted", requestId, driverId });
-
-    // Notify guest via FCM
-    if (guestFcmToken) {
-      sendToGuest(requestId, guestFcmToken, {
-        title: "Sürücü Yolda",
-        body: "Talebiniz bir sürücü tarafından kabul edildi.",
-      }).catch(() => {});
-    }
 
     return result;
   },
