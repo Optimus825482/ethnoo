@@ -34,6 +34,16 @@ describe("MonitorService.getState", () => {
       },
     });
 
+    // Create an active session so driver appears as logged in
+    await prisma.session.create({
+      data: {
+        userId: testDriver.id,
+        tokenHash: `test-token-t1-${Date.now()}`,
+        isActive: true,
+        expiresAt: new Date(Date.now() + 86400_000), // 24h from now
+      },
+    });
+
     testBuggy = await prisma.buggy.create({
       data: {
         hotelId: hotel.hotel.id,

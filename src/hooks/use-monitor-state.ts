@@ -7,7 +7,8 @@ export interface MonitorBuggy {
   id: number; code: string; icon: string | null;
   status: "AVAILABLE" | "BUSY" | "OFFLINE" | "MAINTENANCE";
   currentLocationId: number | null;
-  drivers: { id: number; fullName: string }[];
+  drivers: { id: number; fullName: string; loggedIn?: boolean }[];
+  driverLoggedIn?: boolean;
 }
 export interface MonitorRequest {
   id: number; status: "PENDING" | "ACCEPTED"; guestName: string | null; roomNumber: string | null;

@@ -46,10 +46,20 @@ export default function MonitorPage() {
 
   const pending = data.requests.filter((r) => r.status === "PENDING");
   const accepted = data.requests.filter((r) => r.status === "ACCEPTED");
-  const activeBuggies = data.buggies.filter((b) => b.status === "AVAILABLE" || b.status === "BUSY");
+  // Sadece MUSAIT durumda olan araçlar listelensin (sofor giris yapmis olmali)
+  const availableBuggies = data.buggies.filter((b) => b.status === "AVAILABLE");
   const locName = useMemo(() => new Map(data.locations.map((l) => [l.id, l.name])), [data.locations]);
   const unmappedIds = useMemo(() => new Set(data.locations.filter((l) => l.mapX == null || l.mapY == null).map((l) => l.id)), [data.locations]);
-  const noLocationBuggies = data.buggies.filter((b) => b.currentLocationId == null);
+  const noLocationBuggies = availableBuggies.filter((b) => b.currentLocationId == null);
+
+  const statusTr: Record<string, string> = {
+    AVAILABLE: "Musait",
+    BUSY: "Mesgul",
+    OFFLINE: "Cevrimdisi",
+    MAINTENANCE: "Bakimda",
+    PENDING: "Bekliyor",
+    ACCEPTED: "Kabul edildi",
+  };
 
   if (data === initialMonitorData) return <Loading fullPage />;
 
@@ -64,7 +74,7 @@ export default function MonitorPage() {
         </Badge>
         <div className="flex items-center gap-4 ml-auto text-sm">
           <span className="flex items-center gap-1.5"><Bell className="w-4 h-4 text-red-500" /><b>{pending.length}</b> bekleyen</span>
-          <span className="flex items-center gap-1.5"><Car className="w-4 h-4 text-emerald-600" /><b>{activeBuggies.length}</b> aktif arac</span>
+          <span className="flex items-center gap-1.5"><Car className="w-4 h-4 text-emerald-600" /><b>{availableBuggies.length}</b> musait arac</span>
           <Button size="sm" variant="outline" onClick={() => setMuted((m) => !m)}>
             {muted ? <BellOff className="w-4 h-4 mr-1" /> : <Bell className="w-4 h-4 mr-1" />}
             {muted ? "Ses kapali" : "Ses acik"}
@@ -134,24 +144,23 @@ export default function MonitorPage() {
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Car className="w-4 h-4" /> Araclar ({data.buggies.length})</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Car className="w-4 h-4" /> Musait Araclar ({availableBuggies.length})</CardTitle></CardHeader>
               <CardContent className="space-y-2">
-                {data.buggies.map((b) => (
+                {availableBuggies.length === 0 && <p className="text-sm text-muted-foreground">Musait arac yok</p>}
+                {availableBuggies.map((b) => (
                   <button key={b.id} onClick={() => setSelection({ kind: "buggy", id: b.id })}
                           className={`w-full text-left rounded-lg border p-2.5 text-sm transition-colors ${selection?.kind === "buggy" && selection.id === b.id ? "border-primary bg-primary/10" : "border-border hover:bg-muted"}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{b.icon} {b.code}</span>
-                      <Badge variant={b.status === "AVAILABLE" ? "default" : b.status === "BUSY" ? "secondary" : "outline"}>
-                        {b.status}
-                      </Badge>
+                      <Badge variant="default">{statusTr[b.status]}</Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {b.drivers[0]?.fullName || "Surucu yok"} · {b.currentLocationId ? locName.get(b.currentLocationId) || "?" : "konum bilinmiyor"}
+                      {b.drivers[0]?.fullName || "Sofor yok"} · {b.currentLocationId ? locName.get(b.currentLocationId) || "?" : "konum bilinmiyor"}
                     </div>
                   </button>
                 ))}
                 {noLocationBuggies.length > 0 && (
-                  <p className="text-xs text-muted-foreground pt-1">{noLocationBuggies.length} arac henuz konum bildirmedi -- haritada gorunmez.</p>
+                  <p className="text-xs text-muted-foreground pt-1">{noLocationBuggies.length} arac henuz konum bildirmedi — haritada gorunmez.</p>
                 )}
               </CardContent>
             </Card>
