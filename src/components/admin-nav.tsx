@@ -34,12 +34,14 @@ function SidebarContent({ user, pathname }: { user: { fullName: string }; pathna
         </div>
       </div>
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
+        {!mounted
+          ? <div className="px-3 py-4 text-xs text-muted-foreground">Yükleniyor…</div>
+          : navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-              mounted && pathname.startsWith(item.href)
+              pathname.startsWith(item.href)
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
