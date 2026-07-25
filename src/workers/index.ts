@@ -31,6 +31,30 @@ cron.schedule("* * * * *", async () => {
   }
 });
 
+// Auto OFF_DUTY — every 60s, mark drivers w/o heartbeat for 5+ min as OFF_DUTY
+cron.schedule("* * * * *", async () => {
+  try {
+    const threshold = new Date(Date.now() - 5 * 60 * 1000);
+    const result = await prisma.user.updateMany({
+      where: {
+        role: "DRIVER",
+        driverStatus: "ON_DUTY",
+        isActive: true,
+        OR: [
+          { lastHeartbeat: { lt: threshold } },
+          { lastHeartbeat: null },
+        ],
+      },
+      data: { driverStatus: "OFF_DUTY" },
+    });
+    if (result.count > 0) {
+      console.log(`[off_duty] ${result.count} drivers marked OFF_DUTY (heartbeat timeout)`);
+    }
+  } catch (err) {
+    console.error("[off_duty] Error:", err);
+  }
+});
+
 // Session cleanup — every hour, mark expired sessions as inactive
 cron.schedule("0 * * * *", async () => {
   try {
