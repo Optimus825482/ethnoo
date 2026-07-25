@@ -56,3 +56,40 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+// Push notification — Web Push
+self.addEventListener("push", (event) => {
+  let data = { title: "ShuttleCall", body: "Yeni bildirim" };
+  try {
+    if (event.data) data = event.data.json();
+  } catch {}
+
+  const options = {
+    body: data.body || "",
+    icon: "/images/logo.png",
+    badge: "/images/badge.png",
+    tag: data.tag || "shuttlecall",
+    vibrate: [200, 100, 200],
+    silent: false,
+    sound: "/sounds/notification.mp3",
+    data: { url: data.url || "/driver/dashboard" },
+    actions: data.actions || [],
+    requireInteraction: true,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
+});
+
+// Notification click — open relevant page
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || "/driver/dashboard";
+  event.waitUntil(
+    clients.matchAll({ type: "window" }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes(url) && "focus" in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow(url);
+    })
+  );
+});
