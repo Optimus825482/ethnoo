@@ -27,6 +27,8 @@ const locationsResponse = {
         displayOrder: 1,
         isActive: true,
         qrCodeData: "data:image/png;base64,abc123",
+        mapX: null,
+        mapY: null,
       },
       {
         id: 2,
@@ -35,6 +37,8 @@ const locationsResponse = {
         displayOrder: 2,
         isActive: true,
         qrCodeData: null,
+        mapX: null,
+        mapY: null,
       },
     ],
   },
@@ -185,6 +189,8 @@ describe("LocationsPage", () => {
           name: "Beach",
           description: undefined,
           displayOrder: 0,
+          mapX: null,
+          mapY: null,
         }),
       });
     });

@@ -17,6 +17,7 @@ import { Loading } from "@/components/ui/loading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { Plus, MapPin, QrCode, Upload, Trash2, Image as ImageIcon, Download } from "lucide-react";
+import { LocationMapPicker } from "@/components/monitor/location-map-picker";
 import QRCode from "qrcode";
 
 interface Location {
@@ -27,6 +28,8 @@ interface Location {
   displayOrder: number;
   isActive: boolean;
   qrCodeData: string | null;
+  mapX: number | null;
+  mapY: number | null;
 }
 
 export default function LocationsPage() {
@@ -42,6 +45,7 @@ export default function LocationsPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [showQR, setShowQR] = useState<Location | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
+  const [mapPoint, setMapPoint] = useState<{ x: number; y: number } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -135,6 +139,8 @@ export default function LocationsPage() {
         name: form.name,
         description: form.description || undefined,
         displayOrder: Number(form.displayOrder) || 0,
+        mapX: mapPoint?.x ?? null,
+        mapY: mapPoint?.y ?? null,
       }),
     });
     const json = await res.json();
@@ -158,6 +164,7 @@ export default function LocationsPage() {
     setForm({ name: "", description: "", displayOrder: "0" });
     setLogoPreview(null);
     setPendingLogoFile(null);
+    setMapPoint(null);
   }
 
   async function generateQR(loc: Location) {
@@ -220,6 +227,7 @@ export default function LocationsPage() {
                   <TableHead>Ad</TableHead>
                   <TableHead>Açıklama</TableHead>
                   <TableHead>Sıra</TableHead>
+                  <TableHead>Harita</TableHead>
                   <TableHead>Durum</TableHead>
                   <TableHead>QR</TableHead>
                   <TableHead>İşlemler</TableHead>
@@ -241,6 +249,13 @@ export default function LocationsPage() {
                     <TableCell className="text-sm">{l.description || "—"}</TableCell>
                     <TableCell>{l.displayOrder}</TableCell>
                     <TableCell>
+                      {l.mapX != null && l.mapY != null ? (
+                        <Badge variant="default">✓</Badge>
+                      ) : (
+                        <Badge variant="outline">yok</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Badge variant={l.isActive ? "default" : "outline"}>
                         {l.isActive ? "Aktif" : "Pasif"}
                       </Badge>
@@ -261,6 +276,7 @@ export default function LocationsPage() {
                           setForm({ name: l.name, description: l.description || "", displayOrder: String(l.displayOrder) });
                           setLogoPreview(l.logo || null);
                           setPendingLogoFile(null);
+                          setMapPoint(l.mapX != null && l.mapY != null ? { x: l.mapX, y: l.mapY } : null);
                           setShowDialog(true);
                         }}>Düzenle</Button>
                         <Button size="sm" variant="ghost" onClick={() => generateQR(l)}>
@@ -312,7 +328,7 @@ export default function LocationsPage() {
           resetForm();
         }
       }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "Konum Düzenle" : "Konum Ekle"}</DialogTitle>
           </DialogHeader>
@@ -377,6 +393,10 @@ export default function LocationsPage() {
             <div className="space-y-2">
               <Label htmlFor="displayOrder">Görüntüleme Sırası</Label>
               <Input id="displayOrder" type="number" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Harita Noktası (Canlı Harita)</Label>
+              <LocationMapPicker value={mapPoint} onChange={setMapPoint} />
             </div>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setShowDialog(false)}>İptal</Button>
