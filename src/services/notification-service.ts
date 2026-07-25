@@ -104,8 +104,16 @@ export async function sendToDrivers(
   hotelId: number,
   payload: { title: string; body: string; type?: string },
 ): Promise<void> {
+  const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+
   const drivers = await prisma.user.findMany({
-    where: { hotelId, role: "DRIVER", isActive: true },
+    where: {
+      hotelId,
+      role: "DRIVER",
+      isActive: true,
+      driverStatus: "ON_DUTY",
+      lastHeartbeat: { gte: fiveMinAgo },
+    },
     select: { id: true, fcmToken: true, pushSubscription: true },
   });
 
