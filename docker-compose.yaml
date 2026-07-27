@@ -34,8 +34,9 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
-    ports:
-      - "3016:3016"
+    networks:
+      - coolify
+      - default
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
@@ -49,9 +50,6 @@ services:
       - "traefik.http.routers.ethno-http.middlewares=ethno-redirect"
       - "traefik.http.middlewares.ethno-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.ethno-redirect.redirectscheme.permanent=true"
-    networks:
-      - coolify
-      - default
 
   worker:
     build: .
