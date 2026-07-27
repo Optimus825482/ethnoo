@@ -1,11 +1,11 @@
 FROM node:22-alpine AS base
 
-# Install dependencies
+# Install ALL dependencies (dev needed for tailwind/postcss during build)
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Build
 FROM base AS builder
@@ -38,7 +38,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Prisma + worker
+# Prisma + worker + production deps
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/src ./src
