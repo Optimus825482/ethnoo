@@ -1,22 +1,17 @@
 FROM node:22-alpine AS base
 
-# Install ALL dependencies (includes devDeps for tailwind/postcss)
-FROM base AS deps
+# Build — single stage, cache-busted by COPY . .
+FROM base AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
-
-# Build
-FROM base AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npm run build
 
-# Runner — copy both standalone + full node_modules
+# Runner
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
