@@ -3,9 +3,14 @@ FROM node:22-alpine AS base
 FROM base AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-# COPY . . first — any file change busts the npm ci cache
+
+COPY package.json package-lock.json ./
+
+# Coolify passes COOLIFY_BUILD_SECRETS_HASH — changes on env/config update, busts stale npm cache
+ARG COOLIFY_BUILD_SECRETS_HASH
+RUN echo "cache-bust: ${COOLIFY_BUILD_SECRETS_HASH}" && npm ci
+
 COPY . .
-RUN npm ci
 RUN npx prisma generate
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npm run build
