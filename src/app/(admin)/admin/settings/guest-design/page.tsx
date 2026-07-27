@@ -154,27 +154,8 @@ export default function GuestDesignPage() {
   const callPreview = useMemo(() => <CallPagePreview config={deferredConfig} />, [deferredConfig]);
   const statusPreview = useMemo(() => <StatusPagePreview config={deferredConfig} />, [deferredConfig]);
 
-  const colorRef = useRef<Record<string, string>>({});
-
   function updateField(key: string, value: unknown) { setConfig(prev => ({ ...prev, [key]: value })); }
   function updateFieldMode(key: string, mode: FieldMode) { setConfig(prev => ({ ...prev, fields: { ...prev.fields, [key]: mode } })); }
-
-  // Renk input: sadece blur'da state güncelle, onChange'de sadece ref
-  function colorProps(key: string) {
-    const current = colorRef.current[key] ?? config[key as keyof GuestPageConfig] ?? "";
-    return {
-      defaultValue: String(current),
-      onInput(e: React.FormEvent<HTMLInputElement>) {
-        colorRef.current[key] = (e.target as HTMLInputElement).value;
-      },
-      onBlur() {
-        if (colorRef.current[key] !== undefined) {
-          updateField(key, colorRef.current[key]);
-          delete colorRef.current[key];
-        }
-      },
-    };
-  }
 
   function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -282,7 +263,7 @@ export default function GuestDesignPage() {
                       <div key={key} className="space-y-1">
                         <Label className="text-xs">{labelMap[key]}</Label>
                         <div className="flex items-center gap-1.5">
-                          <input type="color" {...colorProps(key)} className="w-7 h-7 rounded border cursor-pointer" />
+                          <input type="color" value={String(config[key])} onChange={(e) => updateField(key, e.target.value)} className="w-7 h-7 rounded border cursor-pointer" />
                           <Input className="h-7 text-xs font-mono" defaultValue={String(config[key])} onBlur={(e) => updateField(key, e.target.value)} />
                         </div>
                       </div>
@@ -318,7 +299,7 @@ export default function GuestDesignPage() {
                   <h3 className="font-semibold text-sm">🔘 Çağrı Butonu</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5"><Label className="text-xs">Metin</Label><Input className="h-8 text-sm" value={config.buttonText} onChange={(e) => updateField("buttonText", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Renk</Label><div className="flex items-center gap-1.5"><input type="color" {...colorProps("buttonColor")} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.buttonColor} onBlur={(e) => updateField("buttonColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Renk</Label><div className="flex items-center gap-1.5"><input type="color" value={config.buttonColor} onChange={(e) => updateField("buttonColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.buttonColor} onBlur={(e) => updateField("buttonColor", e.target.value)} /></div></div>
                     <div className="space-y-1.5"><Label className="text-xs">Şekil</Label><Select value={config.buttonShape} onValueChange={(v) => updateField("buttonShape", v)}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="rounded">Yuvarlak</SelectItem><SelectItem value="pill">Tam Yuvarlak</SelectItem></SelectContent></Select></div>
                   </div>
                 </CardContent>
@@ -328,8 +309,8 @@ export default function GuestDesignPage() {
                   <h3 className="font-semibold text-sm">Footer</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5"><Label className="text-xs">Metin</Label><Input className="h-8 text-sm" value={config.footerText} onChange={(e) => updateField("footerText", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">BG Rengi</Label><div className="flex items-center gap-1.5"><input type="color" {...colorProps("footerBgColor")} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerBgColor} onBlur={(e) => updateField("footerBgColor", e.target.value)} /></div></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Yazı Rengi</Label><div className="flex items-center gap-1.5"><input type="color" {...colorProps("footerTextColor")} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerTextColor} onBlur={(e) => updateField("footerTextColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">BG Rengi</Label><div className="flex items-center gap-1.5"><input type="color" value={config.footerBgColor} onChange={(e) => updateField("footerBgColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerBgColor} onBlur={(e) => updateField("footerBgColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Yazı Rengi</Label><div className="flex items-center gap-1.5"><input type="color" value={config.footerTextColor} onChange={(e) => updateField("footerTextColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerTextColor} onBlur={(e) => updateField("footerTextColor", e.target.value)} /></div></div>
                   </div>
                 </CardContent>
               </Card>
@@ -361,7 +342,7 @@ export default function GuestDesignPage() {
                   <h3 className="font-semibold text-sm flex items-center gap-2"><Palette className="w-4 h-4" /> Durum Sayfası Renkleri</h3>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {([{ k: "bgStartColor", l: "Üst BG" }, { k: "bgEndColor", l: "Alt BG" }, { k: "headerTextColor", l: "Yazı" }] as Array<{k: keyof GuestPageConfig, l: string}>).map(({ k, l }) => (
-                      <div key={k} className="space-y-1"><Label className="text-xs">{l}</Label><div className="flex items-center gap-1.5"><input type="color" {...colorProps(k)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={String(config[k])} onBlur={(e) => updateField(k, e.target.value)} /></div></div>
+                      <div key={k} className="space-y-1"><Label className="text-xs">{l}</Label><div className="flex items-center gap-1.5"><input type="color" value={String(config[k])} onChange={(e) => updateField(k, e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={String(config[k])} onBlur={(e) => updateField(k, e.target.value)} /></div></div>
                     ))}
                   </div>
                 </CardContent>
