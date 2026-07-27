@@ -8,7 +8,7 @@ COPY package.json package-lock.json ./
 
 # Coolify passes COOLIFY_BUILD_SECRETS_HASH — changes on env/config update, busts stale npm cache
 ARG COOLIFY_BUILD_SECRETS_HASH
-RUN echo "cache-bust: ${COOLIFY_BUILD_SECRETS_HASH}" && npm ci
+RUN echo "cache-bust: ${COOLIFY_BUILD_SECRETS_HASH}" && npm ci --production=false
 
 COPY . .
 RUN npx prisma generate
