@@ -1,17 +1,15 @@
 FROM node:22-alpine AS base
 
-# Build — single stage, cache-busted by COPY . .
 FROM base AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+# COPY . . first — any file change busts the npm ci cache
 COPY . .
+RUN npm ci
 RUN npx prisma generate
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npm run build
 
-# Runner
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
