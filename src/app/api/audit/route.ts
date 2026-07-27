@@ -17,4 +17,4 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
 
   const result = await ReportService.getAuditLogs(ctx.user!.hotelId, params);
   return apiSuccess(result);
-}));
+}, { role: "ADMIN" }));

@@ -72,7 +72,7 @@ export default function BuggiesPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/buggies");
+    const res = await fetch("/api/buggies?isActive=true");
     const json = await res.json();
     if (json.success) setBuggies(json.data.items);
     setLoading(false);
@@ -89,7 +89,7 @@ export default function BuggiesPage() {
     const userRes = await fetch("/api/admin/users?role=DRIVER");
     const userJson = await userRes.json();
     if (userJson.success) {
-      setDrivers(userJson.data.items.map((u: any) => ({ id: u.id, fullName: u.fullName, username: u.username })));
+      setDrivers(userJson.data.items.map((u: Driver) => ({ id: u.id, fullName: u.fullName, username: u.username })));
     }
   }
 

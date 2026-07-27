@@ -13,7 +13,9 @@ class EventBus {
     this.channels.get(channel)!.add(handler);
 
     return () => {
-      this.channels.get(channel)?.delete(handler);
+      const handlers = this.channels.get(channel);
+      handlers?.delete(handler);
+      if (handlers?.size === 0) this.channels.delete(channel);
     };
   }
 

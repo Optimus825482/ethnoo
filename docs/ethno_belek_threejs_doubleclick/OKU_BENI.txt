@@ -1,0 +1,10 @@
+Ethno Belek Three.js Çift Tık Uyumlu Sürüm
+
+Kullanım:
+1. Zip dosyasını klasöre çıkarın.
+2. index.html dosyasına çift tıklayın.
+3. three.min.js dosyası index.html ile aynı klasörde kalmalıdır.
+
+Bu pakette map.jpg yoktur; harita küçük JPEG data-uri olarak index.html içine gömülüdür.
+Bu yüzden file:// CORS hatası vermez.
+three.min.js r149 kullanır; r150+ deprecation uyarısı da çıkmaz.

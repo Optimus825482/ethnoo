@@ -43,4 +43,4 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx): Promis
       "X-Accel-Buffering": "no",
     },
   });
-}));
+}, { role: "ADMIN" }));

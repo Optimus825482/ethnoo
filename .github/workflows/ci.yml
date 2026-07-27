@@ -1,0 +1,45 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: corepack enable && corepack prepare pnpm@10.26.1 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec prisma generate
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - run: pnpm test:frontend
+      - run: pnpm build
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # Fails only on high/critical findings; moderate findings remain visible in output.
+      # GHSA-mh99-v99m-4gvg declares <=5.0.7 vulnerable and 5.0.8 patched, but pnpm still flags 5.0.8; scoped ignore only.
+      - run: pnpm audit:prod
+      - run: docker compose config --quiet
+        env:
+          DB_PASSWORD: ci
+          NEXTAUTH_SECRET: ci
+          SETUP_SECRET: ci
+          VAPID_PUBLIC_KEY: ci
+          VAPID_PRIVATE_KEY: ci
+          VAPID_CONTACT_EMAIL: ci@example.com
+      - run: docker compose build
+        env:
+          DB_PASSWORD: ci
+          NEXTAUTH_SECRET: ci
+          SETUP_SECRET: ci
+          VAPID_PUBLIC_KEY: ci
+          VAPID_PRIVATE_KEY: ci
+          VAPID_CONTACT_EMAIL: ci@example.com

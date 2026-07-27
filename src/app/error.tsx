@@ -13,7 +13,12 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    console.error(JSON.stringify({
+      timestamp: new Date().toISOString(),
+      level: "error",
+      message: "client error boundary",
+      digest: error.digest ?? "unavailable",
+    }));
   }, [error]);
 
   return (
@@ -31,7 +36,7 @@ export default function Error({
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4 text-center">
           <p className="text-sm text-muted-foreground">
-            {error.message || "An unexpected error occurred."}
+            An unexpected error occurred. Reference: {error.digest ?? "unavailable"}
           </p>
           <Button onClick={reset}>Try again</Button>
         </CardContent>

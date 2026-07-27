@@ -9,15 +9,15 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   // Hotel
   const hotel = await prisma.hotel.upsert({
-    where: { code: "DEMO" },
+    where: { code: "ETHNO" },
     update: {},
     create: {
-      code: "DEMO",
-      name: "Demo Resort & Spa",
+      code: "ETHNO",
+      name: "Ethno Hotels",
       timezone: "Europe/Istanbul",
-      address: "Demo Address 123",
+      address: "Ethno Hotels Resort",
       phone: "+90 555 000 0000",
-      email: "info@demoresort.com",
+      email: "info@ethnohotels.com",
       isActive: true,
       setupCompleted: true,
     },
@@ -34,7 +34,7 @@ async function main() {
       passwordHash: adminHash,
       role: "ADMIN",
       fullName: "System Admin",
-      email: "admin@demoresort.com",
+      email: "admin@ethnohotels.com",
       isActive: true,
       mustChangePassword: false,
     },
@@ -91,7 +91,7 @@ async function main() {
     },
   });
 
-  const beach = await prisma.location.create({
+  await prisma.location.create({
     data: {
       hotelId: hotel.id,
       name: "Beach Access",
@@ -101,7 +101,7 @@ async function main() {
     },
   });
 
-  const spa = await prisma.location.create({
+  await prisma.location.create({
     data: {
       hotelId: hotel.id,
       name: "Spa & Wellness",
@@ -148,7 +148,7 @@ async function main() {
     },
   });
 
-  const buggy3 = await prisma.buggy.create({
+  await prisma.buggy.create({
     data: {
       hotelId: hotel.id,
       code: "BG-003",

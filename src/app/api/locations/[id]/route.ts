@@ -15,8 +15,8 @@ export const GET = async (_req: NextRequest) => {
     });
     if (!location) return apiError("Location not found", 404, "LOCATION_NOT_FOUND");
     return apiSuccess(location);
-  } catch (err: any) {
-    return apiError(err.message || "Failed", 500);
+  } catch (err) {
+    return apiError(err instanceof Error ? err.message : "Failed", 500);
   }
 };
 
@@ -35,7 +35,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));
 
 export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   try {
@@ -45,4 +45,4 @@ export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => 
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));

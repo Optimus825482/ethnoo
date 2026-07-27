@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { LayoutDashboard, Car, MapPin, Users, BarChart3, FileText, Settings, PlayCircle, LogOut, Menu, Monitor } from "lucide-react";
+import { LayoutDashboard, Car, MapPin, Users, BarChart3, FileText, Settings, PlayCircle, LogOut, Menu, Monitor, Palette } from "lucide-react";
 
 const navItems = [
   { href: "/admin/dashboard", label: "Panel", icon: LayoutDashboard },
@@ -18,11 +19,15 @@ const navItems = [
   { href: "/admin/reports", label: "Raporlar", icon: BarChart3 },
   { href: "/admin/audit", label: "Denetim", icon: FileText },
   { href: "/admin/settings", label: "Ayarlar", icon: Settings },
+  { href: "/admin/settings/guest-design", label: "Sayfa Tasarımı", icon: Palette },
 ];
 
 function SidebarContent({ user, pathname }: { user: { fullName: string }; pathname: string }) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <div className="flex flex-col h-full">

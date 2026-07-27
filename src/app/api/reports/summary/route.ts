@@ -14,4 +14,4 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     dateTo ? new Date(dateTo) : undefined,
   );
   return apiSuccess(summary);
-}));
+}, { role: "ADMIN" }));

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -381,7 +382,7 @@ export default function AdminDashboard() {
               <div className="h-40 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={(e: any) => e.value}>
+                    <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ value }) => value}>
                       {pieData.map((entry, i) => (
                         <Cell key={i} fill={entry.color} />
                       ))}

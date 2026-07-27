@@ -3,38 +3,35 @@ set -e
 
 echo "=== ShuttleCall Entry Point ==="
 
-# Wait for Postgres if DATABASE_URL points to a separate host
 if [ -n "$DATABASE_URL" ]; then
-  # Extract host from DATABASE_URL
-  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's/.*@\([^:]*\).*/\1/p')
-  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
+  DB_HOST=$(printf '%s' "$DATABASE_URL" | sed -n 's/.*@\([^:]*\).*/\1/p')
+  DB_PORT=$(printf '%s' "$DATABASE_URL" | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
   DB_PORT=${DB_PORT:-5432}
 
   if [ -n "$DB_HOST" ] && [ "$DB_HOST" != "localhost" ] && [ "$DB_HOST" != "127.0.0.1" ]; then
     echo "Waiting for Postgres at $DB_HOST:$DB_PORT ..."
-    until pg_isready -h "$DB_HOST" -p "$DB_PORT" -t 5; do
-      echo "  Postgres not ready, retrying..."
+    ready=false
+    for attempt in $(seq 1 30); do
+      if pg_isready -h "$DB_HOST" -p "$DB_PORT" -t 5 >/dev/null 2>&1; then
+        ready=true
+        break
+      fi
+      echo "  Postgres not ready ($attempt/30)"
       sleep 2
     done
-    echo "Postgres is ready!"
+    if [ "$ready" != true ]; then
+      echo "Postgres unavailable after 30 attempts." >&2
+      exit 1
+    fi
   fi
 fi
 
-# Run Prisma migrations
-echo "Running database migrations..."
-node_modules/.bin/prisma migrate deploy 2>&1 || {
-  echo "migrate deploy failed, trying db push..."
-  node_modules/.bin/prisma db push --accept-data-loss 2>&1
-}
-echo "Migrations done."
+if [ "$1" = "node" ] && [ "${2:-}" = "server.js" ]; then
+  echo "Running database migrations..."
+  node_modules/.bin/prisma migrate deploy
+  echo "Migrations done."
+fi
 
-# Run seed (idempotent — uses upsert for users/hotel)
-echo "Seeding database..."
-node_modules/.bin/tsx prisma/seed.ts 2>&1 || echo "Seed skipped (may already exist)."
-echo "Seed done."
+mkdir -p /app/public/images/locations
 
-# Ensure uploads dir is writable
-mkdir -p /app/public/images/locations /app/uploads 2>/dev/null || true
-
-echo "=== Starting Next.js ==="
 exec "$@"

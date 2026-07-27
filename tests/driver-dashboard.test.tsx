@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import DriverDashboard from "@/app/(driver)/driver/dashboard/page";
 
 const { mockToast } = vi.hoisted(() => ({
@@ -83,31 +83,35 @@ beforeEach(() => {
     onmessage: ((e: MessageEvent) => void) | null = null;
     onerror: ((e: Event) => void) | null = null;
     close = vi.fn();
-    constructor(_url: string) {}
+    constructor() {}
   }
   global.EventSource = MockEventSource as unknown as typeof EventSource;
 });
 
 // Helper: mock fetch to return locations first, then active requests for every subsequent call
 function setupFetchMocks(primaryResponse: object) {
-  let callCount = 0;
   global.fetch = vi.fn().mockImplementation((url: string) => {
-    callCount++;
     // First call when no localStorage = /api/locations
     if (url === "/api/locations") {
       return Promise.resolve({ json: () => Promise.resolve(locationsResponse) });
     }
-    // All other calls = /api/requests/active
+    if (url === "/api/driver/location") {
+      return Promise.resolve({ json: () => Promise.resolve({
+        success: true,
+        data: { driverStatus: "ON_DUTY", buggy: null },
+      }) });
+    }
     return Promise.resolve({ json: () => Promise.resolve(primaryResponse) });
   });
 }
 
 describe("DriverDashboard", () => {
-  it("shows loading state initially", () => {
-    global.fetch = vi.fn().mockReturnValueOnce(new Promise(() => {}));
+  it("shows loading state initially", async () => {
+    global.fetch = vi.fn().mockReturnValue(new Promise(() => {}));
     render(<DriverDashboard />);
     const loading = document.querySelector('[class*="animate-spin"]');
     expect(loading).toBeInTheDocument();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
   });
 
   it("renders driver dashboard heading", async () => {
@@ -162,12 +166,12 @@ describe("DriverDashboard", () => {
 
     render(<DriverDashboard />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Sürücü Paneli")).toBeInTheDocument();
-    });
+    await screen.findAllByRole("button", { name: /kabul et/i });
 
     (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
-      if (url === "/api/locations") return Promise.resolve({ json: () => Promise.resolve(locationsResponse) });
+      if (url === "/api/requests/active") {
+        return Promise.resolve({ json: () => Promise.resolve({ success: true, data: [] }) });
+      }
       return Promise.resolve({ json: () => Promise.resolve({ success: true }) });
     });
 

@@ -19,7 +19,7 @@ export const POST = toRouteHandler(
 
         // No session → guest cancel
         if (!token) {
-          const request = await RequestService.cancelByGuest(id);
+          const request = await RequestService.cancelByGuest(id, req.headers.get("x-guest-capability"));
           return apiSuccess(request);
         }
 
@@ -35,9 +35,7 @@ export const POST = toRouteHandler(
         });
 
         if (!session || !session.isActive || session.expiresAt < new Date() || !session.user.isActive || !session.user.hotel?.isActive) {
-          // Invalid session → treat as guest cancel
-          const request = await RequestService.cancelByGuest(id);
-          return apiSuccess(request);
+          return apiError("Session expired or invalid", 401, "SESSION_EXPIRED");
         }
 
         const cancelledBy = session.user.role === "ADMIN" ? "ADMIN" : "DRIVER";

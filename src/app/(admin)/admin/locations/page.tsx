@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
 import { useEffect, useState, useRef } from "react";
@@ -109,22 +110,6 @@ export default function LocationsPage() {
     } else {
       toast.error("Silme başarısız");
     }
-  }
-
-  // --- Dialog logo selection (pending file, uploaded on submit) ---
-  function handleDialogLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 500 * 1024) {
-      toast.error("Dosya çok büyük (maks 500KB)");
-      return;
-    }
-    if (!file.type.startsWith("image/")) {
-      toast.error("Sadece resim dosyası");
-      return;
-    }
-    setPendingLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
   }
 
   async function handleSubmit(e: React.FormEvent) {

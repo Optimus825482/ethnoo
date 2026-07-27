@@ -1,37 +1,37 @@
+import type { NotificationType } from "@prisma/client";
+import WebPush from "web-push";
 import { prisma } from "@/lib/db";
+import { getEnv } from "@/env";
+
+type PushSubscription = Parameters<typeof WebPush.sendNotification>[0];
+function isWebPushError(error: unknown): error is Error & { statusCode?: number } {
+  return error instanceof Error;
+}
 
 // Web Push (VAPID) — self-hosted, FCM-free
-let webPushModule: any = null;
-function getWebPush() {
-  if (!webPushModule) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      webPushModule = require("web-push");
-      if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-        webPushModule.setVapidDetails(
-          process.env.VAPID_CONTACT_EMAIL || "mailto:admin@shuttlecall.com",
-          process.env.VAPID_PUBLIC_KEY,
-          process.env.VAPID_PRIVATE_KEY,
-        );
-      }
-    } catch {
-      console.warn("[notif] web-push not available");
-      return null;
-    }
+let vapidConfigured = false;
+function getWebPush(): typeof WebPush | null {
+  if (!vapidConfigured) {
+    WebPush.setVapidDetails(
+      getEnv().VAPID_CONTACT_EMAIL,
+      getEnv().VAPID_PUBLIC_KEY,
+      getEnv().VAPID_PRIVATE_KEY,
+    );
+    vapidConfigured = true;
   }
-  return webPushModule;
+  return WebPush;
 }
 
 // --- Public helpers ---
 
 export function getVapidPublicKey(): string {
-  return process.env.VAPID_PUBLIC_KEY || "";
+  return getEnv().VAPID_PUBLIC_KEY;
 }
 
 // --- Send functions ---
 
 export async function sendWebPush(
-  subscription: object,
+  subscription: PushSubscription,
   payload: { title: string; body: string },
 ): Promise<boolean> {
   const wp = getWebPush();
@@ -40,11 +40,15 @@ export async function sendWebPush(
   try {
     await wp.sendNotification(subscription, JSON.stringify(payload));
     return true;
-  } catch (err: any) {
-    if (err.statusCode === 410 || err.statusCode === 404) {
+  } catch (error: unknown) {
+    if (!isWebPushError(error)) {
+      console.error("[notif] Web Push failed with an unknown error");
+      return false;
+    }
+    if (error.statusCode === 410 || error.statusCode === 404) {
       console.warn("[notif] Web Push subscription expired, will clean up");
     } else {
-      console.error("[notif] Web Push error:", err.message);
+      console.error("[notif] Web Push error:", error.message);
     }
     return false;
   }
@@ -52,7 +56,7 @@ export async function sendWebPush(
 
 export async function sendToDrivers(
   hotelId: number,
-  payload: { title: string; body: string; type?: string },
+  payload: { title: string; body: string; type?: NotificationType },
 ): Promise<void> {
   const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
 
@@ -82,7 +86,7 @@ export async function sendToDrivers(
   await prisma.notificationLog.create({
     data: {
       hotelId,
-      notificationType: (payload.type as any) || "NEW_REQUEST",
+      notificationType: payload.type ?? "NEW_REQUEST",
       title: payload.title,
       body: payload.body,
       priority: "HIGH",

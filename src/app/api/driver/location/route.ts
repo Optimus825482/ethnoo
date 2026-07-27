@@ -74,17 +74,18 @@ export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
     });
 
     if (!assignment) {
-      return apiSuccess({ buggy: null, location: null });
+      return apiSuccess({ driverStatus: ctx.user!.driverStatus, buggy: null });
     }
 
     return apiSuccess({
+      driverStatus: ctx.user!.driverStatus,
       buggy: {
         id: assignment.buggy.id,
         code: assignment.buggy.code,
         icon: assignment.buggy.icon,
         status: assignment.buggy.status,
+        currentLocation: assignment.buggy.currentLocation,
       },
-      location: assignment.buggy.currentLocation,
     });
   } catch (err) {
     console.error("[driver/location]", err);

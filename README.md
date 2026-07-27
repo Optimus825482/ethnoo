@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ShuttleCall
 
-## Getting Started
+Hotel shuttle request application. Next.js app, PostgreSQL, separate background worker.
 
-First, run the development server:
+## Local development
+
+Requirements: Node.js, pnpm, PostgreSQL.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install --frozen-lockfile
+pnpm prisma migrate deploy
+pnpm seed                    # explicit demo/development data; never automatic
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open <http://localhost:3016>. API health: <http://localhost:3016/api/health>. Next.js operations documentation: <https://nextjs.org/docs/app/getting-started/deploying>.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Notifications
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Notifications use standards-based Web Push with VAPID. Firebase/FCM is not used. Configure `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_CONTACT_EMAIL`; never commit private keys. Browser permission, HTTPS, and service-worker support are required.
 
-## Learn More
+## Runtime topology
 
-To learn more about Next.js, take a look at the following resources:
+```text
+Browser
+  |
+Reverse proxy / TLS
+  |
+Next.js app :3016 (exactly one replica)
+  |                   |
+PostgreSQL        Web Push endpoints
+  |
+Worker (separate process, same image/code)
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run the app and worker independently:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm start
+pnpm worker
+```
 
-## Deploy on Vercel
+Keep exactly one app replica: session/rate state and SSE delivery are process-local. The worker must be a separate singleton process; do not embed it in every app replica. Add shared coordination before horizontal scaling.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Operations
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm prisma migrate deploy   # required before startup; no db push fallback
+pnpm start                   # application on port 3016
+pnpm worker                  # timeout and cleanup jobs
+pnpm seed                    # explicit only; development/demo environments
+```
+
+Checks:
+
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm coverage:unit
+pnpm coverage:frontend
+pnpm build
+```
+
+Coverage currently reports measured results only; enforce thresholds after establishing a representative baseline, especially for auth and request modules.
+
+Health endpoint: `/api/health`. Public application endpoint: `/`. On failure, inspect app, worker, and PostgreSQL logs separately. Stop rollout when migration fails; restore/rollback using the deployment's database backup procedure before retrying.

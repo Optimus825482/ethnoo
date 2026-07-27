@@ -29,7 +29,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));
 
 export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   try {
@@ -39,4 +39,4 @@ export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => 
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));

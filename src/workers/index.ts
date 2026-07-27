@@ -5,6 +5,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import cron from "node-cron";
+import { RequestService } from "../services/request-service";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -12,19 +13,9 @@ const prisma = new PrismaClient({ adapter });
 // Timeout worker — every 60s, mark PENDING requests older than 1 hour as UNANSWERED
 cron.schedule("* * * * *", async () => {
   try {
-    const timeoutThreshold = new Date(Date.now() - 60 * 60 * 1000);
-    const result = await prisma.buggyRequest.updateMany({
-      where: {
-        status: "PENDING",
-        requestedAt: { lte: timeoutThreshold },
-      },
-      data: {
-        status: "UNANSWERED",
-        timeoutAt: new Date(),
-      },
-    });
-    if (result.count > 0) {
-      console.log(`[timeout] ${result.count} requests marked as UNANSWERED`);
+    const count = await RequestService.timeoutPending();
+    if (count > 0) {
+      console.log(`[timeout] ${count} requests marked as UNANSWERED`);
     }
   } catch (err) {
     console.error("[timeout] Error:", err);

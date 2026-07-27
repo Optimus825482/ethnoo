@@ -1,26 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock external packages before anything else
-vi.mock("firebase-admin", () => {
-  const mockMessaging = {
-    send: vi.fn().mockResolvedValue({}),
-  };
-  const mockAppCheck = {
-    apps: [],
-    credential: { cert: vi.fn() },
-    initializeApp: vi.fn(),
-    messaging: vi.fn(() => mockMessaging),
-  };
-  return {
-    __esModule: true,
-    default: mockAppCheck,
-    apps: mockAppCheck.apps,
-    credential: mockAppCheck.credential,
-    initializeApp: mockAppCheck.initializeApp,
-    messaging: mockAppCheck.messaging,
-  };
-});
-
 vi.mock("web-push", () => ({
   setVapidDetails: vi.fn(),
   sendNotification: vi.fn().mockResolvedValue({}),
@@ -136,7 +115,6 @@ describe("sendToDrivers", () => {
         role: "DRIVER",
         fullName: "Notif Driver",
         isActive: true,
-        fcmToken: "driver-fcm-token",
       },
     });
 

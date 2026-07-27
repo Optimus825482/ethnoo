@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,13 +57,7 @@ export default function ReportsPage() {
   const [driverStats, setDriverStats] = useState<DriverStat[]>([]);
   const [locationStats, setLocationStats] = useState<LocationStat[]>([]);
 
-  // Auto-load summary + performance on mount
-  useEffect(() => {
-    loadSummary();
-    loadReport();
-  }, []);
-
-  async function loadSummary() {
+  const loadSummary = useCallback(async () => {
     setSummaryLoading(true);
     const params = new URLSearchParams();
     if (dateFrom) params.set("dateFrom", dateFrom);
@@ -72,9 +66,9 @@ export default function ReportsPage() {
     const json = await res.json();
     if (json.success) setSummary(json.data);
     setSummaryLoading(false);
-  }
+  }, [dateFrom, dateTo]);
 
-  async function loadReport() {
+  const loadReport = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (dateFrom) params.set("dateFrom", dateFrom);
@@ -88,7 +82,12 @@ export default function ReportsPage() {
     // Also reload summary
     loadSummary();
     setLoading(false);
-  }
+  }, [dateFrom, dateTo, loadSummary]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => void loadReport(), 0);
+    return () => clearTimeout(timer);
+  }, [loadReport]);
 
   const pieData = summary ? [
     { name: "Tamamlanan", value: summary.completed, color: STATUS_COLORS.Tamamlanan },
@@ -209,7 +208,7 @@ export default function ReportsPage() {
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={(e: any) => e.value}>
+                        <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ value }) => value}>
                           {pieData.map((entry, i) => (
                             <Cell key={i} fill={entry.color} />
                           ))}

@@ -46,9 +46,14 @@ const activeResponse = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  global.fetch = vi.fn().mockResolvedValue({
-    json: () => Promise.resolve({}),
+  vi.stubGlobal("EventSource", class {
+    onmessage = null;
+    onerror = null;
+    close = vi.fn();
   });
+  global.fetch = vi.fn().mockImplementation((url: string) => Promise.resolve({
+    json: () => Promise.resolve(url === "/api/buggies" ? { success: true, data: { items: [] } } : {}),
+  }));
 });
 
 describe("AdminDashboard", () => {
@@ -86,7 +91,7 @@ describe("AdminDashboard", () => {
     render(<AdminDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Toplam Talep")).toBeInTheDocument();
+      expect(screen.getByText("Toplam")).toBeInTheDocument();
       expect(screen.getByText("Bekleyen")).toBeInTheDocument();
       expect(screen.getByText("Tamamlanan")).toBeInTheDocument();
       expect(screen.getByText("İptal")).toBeInTheDocument();
@@ -124,10 +129,8 @@ describe("AdminDashboard", () => {
     await waitFor(() => {
       expect(screen.getByText("Ort. Tepki Süresi")).toBeInTheDocument();
       expect(screen.getByText("Ort. Tamamlama Süresi")).toBeInTheDocument();
-      // avgResponseTime = 120s -> 2d 0s
-      expect(screen.getByText("2d 0s")).toBeInTheDocument();
-      // avgCompletionTime = 600s -> 10d 0s
-      expect(screen.getByText("10d 0s")).toBeInTheDocument();
+      expect(screen.getByText("2.0 dk")).toBeInTheDocument();
+      expect(screen.getByText("10.0 dk")).toBeInTheDocument();
     });
   });
 
@@ -153,19 +156,20 @@ describe("AdminDashboard", () => {
   });
 
   it("shows active requests table", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: () => Promise.resolve(summaryResponse),
-    });
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: () => Promise.resolve(activeResponse),
-    });
+    global.fetch = vi.fn().mockImplementation((url: string) => Promise.resolve({
+      json: () => Promise.resolve(
+        url === "/api/reports/summary" ? summaryResponse
+          : url === "/api/requests/active" ? activeResponse
+            : { success: true, data: { items: [] } },
+      ),
+    }));
 
     render(<AdminDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Aktif Talepler")).toBeInTheDocument();
-      expect(screen.getByText("Alice")).toBeInTheDocument();
-      expect(screen.getByText("Bob")).toBeInTheDocument();
+      expect(screen.getByText("Aktif Talepler (2)")).toBeInTheDocument();
+      expect(screen.getByText("Lobby")).toBeInTheDocument();
+      expect(screen.getByText("Pool")).toBeInTheDocument();
       expect(screen.getByText("Driver One")).toBeInTheDocument();
     });
   });

@@ -16,7 +16,7 @@ export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   });
   if (!user) return apiError("User not found", 404, "USER_NOT_FOUND");
   return apiSuccess(user);
-}));
+}, { role: "ADMIN" }));
 
 export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   try {
@@ -60,7 +60,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));
 
 export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   try {
@@ -88,4 +88,4 @@ export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => 
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));

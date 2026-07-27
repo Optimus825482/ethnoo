@@ -63,7 +63,9 @@ export function useMonitorState(opts?: { onNewRequest?: (req: MonitorRequest) =>
   const [data, dispatch] = useReducer(reducer, initialMonitorData);
   const [connected, setConnected] = useState(false);
   const onNewRequestRef = useRef(opts?.onNewRequest);
-  onNewRequestRef.current = opts?.onNewRequest;
+  useEffect(() => {
+    onNewRequestRef.current = opts?.onNewRequest;
+  }, [opts?.onNewRequest]);
   const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refetch = useCallback(async () => {

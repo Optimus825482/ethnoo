@@ -1,12 +1,27 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { afterAll } from "vitest";
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is not set. Configure it in .env");
 }
+
+const databaseUrl = new URL(connectionString);
+if (!/(^|[_-])test([_-]|$)/i.test(databaseUrl.pathname.slice(1))) {
+  throw new Error("Refusing to migrate: DATABASE_URL must name a test database");
+}
+
+const require = createRequire(import.meta.url);
+const prismaCli = require.resolve("prisma/build/index.js");
+execFileSync(process.execPath, [prismaCli, "migrate", "deploy"], {
+  cwd: process.cwd(),
+  env: { ...process.env, DATABASE_URL: connectionString },
+  stdio: "inherit",
+});
 
 const adapter = new PrismaPg({ connectionString });
 export const prisma = new PrismaClient({ adapter });

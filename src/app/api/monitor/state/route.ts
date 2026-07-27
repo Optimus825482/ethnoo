@@ -6,4 +6,4 @@ import { withAuth, toRouteHandler } from "@/lib/middleware";
 export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   const state = await MonitorService.getState(ctx.user!.hotelId);
   return apiSuccess(state);
-}));
+}, { role: "ADMIN" }));

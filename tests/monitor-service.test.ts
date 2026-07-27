@@ -5,7 +5,6 @@ import { MonitorService } from "@/services/monitor-service";
 describe("MonitorService.getState", () => {
   let hotel: Awaited<ReturnType<typeof createTestHotel>>;
   let locMapped: { id: number };
-  let locUnmapped: { id: number };
   let testBuggy: { id: number; code: string };
 
   beforeAll(async () => {
@@ -17,7 +16,7 @@ describe("MonitorService.getState", () => {
     });
 
     // Create an additional location without map coords
-    locUnmapped = await prisma.location.create({
+    await prisma.location.create({
       data: { hotelId: hotel.hotel.id, name: "Spa", isActive: true },
     });
 
@@ -102,16 +101,16 @@ describe("MonitorService.getState", () => {
     const state = await MonitorService.getState(hotel.hotel.id);
 
     // -- locations: Aquapark has mapX/mapY, Spa has null
-    const aq = state.locations.find((l: any) => l.name === "Aquapark");
+    const aq = state.locations.find((l) => l.name === "Aquapark");
     expect(aq).toMatchObject({ mapX: 150, mapY: 362 });
-    const spa = state.locations.find((l: any) => l.name === "Spa");
+    const spa = state.locations.find((l) => l.name === "Spa");
     expect(spa).toBeDefined();
     expect(spa!.mapX).toBeNull();
     // Locations from createTestHotel (Test Lobby, Test Pool) should also appear
     expect(state.locations.length).toBeGreaterThanOrEqual(4);
 
     // -- buggies: find our test buggy by code; createTestHotel also creates buggies
-    const bgT1 = state.buggies.find((b: any) => b.code === "BG-T1");
+    const bgT1 = state.buggies.find((b) => b.code === "BG-T1");
     expect(bgT1).toBeDefined();
     expect(bgT1).toMatchObject({
       code: "BG-T1",

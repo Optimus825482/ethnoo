@@ -1,13 +1,5 @@
 import { z } from 'zod'
-
-// Reused across createUser. Matches changePassword complexity in auth.ts.
-const passwordComplexity = z
-  .string()
-  .min(8, 'Password must be at least 8 characters')
-  .regex(/[A-Z]/, 'Must contain an uppercase letter')
-  .regex(/[a-z]/, 'Must contain a lowercase letter')
-  .regex(/[0-9]/, 'Must contain a digit')
-  .regex(/[^A-Za-z0-9]/, 'Must contain a special character')
+import { passwordSchema } from './password'
 
 // Accepts boolean or 'true'/'false'/'1'/'0' from query strings -> boolean.
 const booleanQuery = z
@@ -17,7 +9,7 @@ const booleanQuery = z
 
 export const createUserSchema = z.object({
   username: z.string().min(1, 'Username required').max(50),
-  password: passwordComplexity,
+  password: passwordSchema,
   role: z.enum(['ADMIN', 'DRIVER']),
   fullName: z.string().min(1, 'Full name required').max(255),
   email: z.email().max(255).optional(),

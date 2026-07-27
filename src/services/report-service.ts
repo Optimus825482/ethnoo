@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { ApiError } from "@/lib/api-response";
 
 export const ReportService = {
   async getSummary(hotelId: number, dateFrom?: Date, dateTo?: Date) {
@@ -92,7 +91,7 @@ export const ReportService = {
 
     const locationStats = Array.from(byLocation.values()).sort((a, b) => b.count - a.count);
 
-    return { driverStats, locationStats, requests };
+    return { driverStats, locationStats };
   },
 
   async getAuditLogs(

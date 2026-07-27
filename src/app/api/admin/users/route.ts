@@ -6,6 +6,14 @@ import { withAuth, withRateLimit, toRouteHandler } from "@/lib/middleware";
 import { hashPassword } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
 
+async function getDemoMode(hotelId: number): Promise<boolean> {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { hotelId_key: { hotelId, key: "demo_mode" } },
+    select: { value: true },
+  });
+  return setting?.value === "true";
+}
+
 export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   const url = new URL(req.url);
   const params = userQuerySchema.parse({
@@ -46,7 +54,7 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   ]);
 
   return apiSuccess({ items, total, page, pageSize, totalPages: Math.ceil(total / pageSize) });
-}));
+}, { role: "ADMIN" }));
 
 export const POST = toRouteHandler(
   withRateLimit(
@@ -65,6 +73,14 @@ export const POST = toRouteHandler(
         const existing = await prisma.user.findUnique({ where: { username: data.username } });
         if (existing) throw new ApiError(409, "Username already exists", "USER_EXISTS");
 
+        const demoMode = await getDemoMode(ctx.user!.hotelId);
+
+        // Demo mod: no email required, no must-change-password forced
+        // Production mod: email required, must-change-password forced
+        if (!demoMode && !data.email) {
+          return apiError("Demo mod kapalıyken e-posta adresi zorunludur", 400, "VALIDATION_ERROR");
+        }
+
         const passwordHash = await hashPassword(data.password);
         const user = await prisma.user.create({
           data: {
@@ -75,7 +91,7 @@ export const POST = toRouteHandler(
             fullName: data.fullName,
             email: data.email,
             phone: data.phone,
-            mustChangePassword: true,
+            mustChangePassword: !demoMode, // Demo modda false, normal modda true
           },
           select: { id: true, username: true, role: true, fullName: true },
         });
@@ -94,6 +110,6 @@ export const POST = toRouteHandler(
         const status = (err as { statusCode?: number }).statusCode || 500;
         return apiError(err instanceof Error ? err.message : "Failed", status);
       }
-    }),
+    }, { role: "ADMIN" }),
   ),
 );

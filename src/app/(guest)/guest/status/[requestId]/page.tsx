@@ -1,15 +1,23 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
-import { Clock, Car, CheckCircle, XCircle, AlertCircle, Check, UserCheck } from "lucide-react";
+import { Clock, Car, CheckCircle, XCircle, AlertCircle, Check, UserCheck, Globe } from "lucide-react";
 import { playNotificationSound } from "@/lib/notification-sound";
+import { guestCapabilityStorage } from "@/lib/guest-capability-storage";
+import { GuestPageConfig, defaultGuestPageConfig } from "@/lib/guest-page-config";
+import { __, LOCALES, getInitialLocale, setLocale, type SupportedLocale, type TranslationKeys } from "@/lib/i18n";
 
 interface RequestDetail {
   id: number;
   status: string;
+  guestName: string | null;
+  roomNumber: string | null;
+  phone: string | null;
+  notes: string | null;
   requestedAt: string;
   acceptedAt: string | null;
   completedAt: string | null;
@@ -21,69 +29,154 @@ interface RequestDetail {
 export default function GuestStatusPage() {
   const params = useParams();
   const requestId = params.requestId as string;
+  const [capability] = useState(() => {
+    // Prefer URL param (for cross-tab via admin simulate), then sessionStorage
+    const urlCap = new URLSearchParams(window.location.search).get("capability");
+    if (urlCap) {
+      guestCapabilityStorage.set(requestId, urlCap);
+      // Clean URL without reload
+      window.history.replaceState(null, "", window.location.pathname);
+      return urlCap;
+    }
+    return guestCapabilityStorage.get(requestId);
+  });
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [missingCapability, setMissingCapability] = useState(() => !capability);
+  const [cancelling, setCancelling] = useState(false);
+  const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
+
+  function tr(key: TranslationKeys): string { return __(locale, key); }
+  function changeLocale(l: SupportedLocale) { setLocaleState(l); setLocale(l); }
+
+  const [config] = useState<GuestPageConfig>(() => {
+    try {
+      const saved = sessionStorage.getItem("guest-status-config");
+      if (saved) return { ...defaultGuestPageConfig, ...JSON.parse(saved) };
+    } catch {}
+    return defaultGuestPageConfig;
+  });
   const prevStatus = useRef("");
+  const stopTransportRef = useRef<() => void>(() => {});
 
   useEffect(() => {
+    if (!capability) return;
+
     let cancelled = false;
+    let terminal = false;
     let interval: ReturnType<typeof setInterval> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let es: EventSource | null = null;
+
+    const stop = () => {
+      terminal = true;
+      if (interval) clearInterval(interval);
+      interval = null;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+      es?.close();
+      es = null;
+    };
+    stopTransportRef.current = stop;
 
     async function load(): Promise<boolean> {
       try {
-        const res = await fetch(`/api/requests/${requestId}`);
+        const res = await fetch(`/api/requests/${requestId}`, {
+          headers: { "x-guest-capability": capability! },
+        });
         const json = await res.json();
         if (cancelled) return true;
         if (json.success) {
-          if (prevStatus.current && prevStatus.current !== json.data.status) {
-            playNotificationSound("ping");
-          }
+          if (prevStatus.current && prevStatus.current !== json.data.status) playNotificationSound("ping");
           prevStatus.current = json.data.status;
           setRequest(json.data);
           setLoading(false);
-          if (["COMPLETED", "CANCELLED", "UNANSWERED"].includes(json.data.status)) {
-            return true; // stop polling
+          terminal = ["COMPLETED", "CANCELLED", "UNANSWERED"].includes(json.data.status);
+          if (terminal) {
+            guestCapabilityStorage.remove(requestId);
+            stop();
           }
+          return terminal;
         }
       } catch {
-        // network error — keep polling
+        // Transient failure: polling retains the reload capability.
       }
       return false;
     }
 
-    load().then((stop) => {
-      if (stop || cancelled) return;
-      interval = setInterval(async () => {
-        const done = await load();
-        if (done && interval) clearInterval(interval);
-      }, 3000);
+    async function connect() {
+      if (cancelled || terminal) return;
+      try {
+        const response = await fetch(`/api/requests/${requestId}/sse-ticket`, {
+          method: "POST",
+          headers: { "x-guest-capability": capability! },
+        });
+        const json = await response.json();
+        if (cancelled || terminal || !json.success) return;
+        es = new EventSource(`/api/sse/guest/${requestId}?ticket=${encodeURIComponent(json.data.ticket)}`);
+        es.onmessage = () => void load();
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          if (!cancelled && !terminal) reconnectTimer = setTimeout(() => void connect(), 1000);
+        };
+      } catch {
+        if (!cancelled && !terminal) reconnectTimer = setTimeout(() => void connect(), 1000);
+      }
+    }
 
-      es = new EventSource(`/api/sse/guest/${requestId}`);
-      es.onmessage = () => load();
-      es.onerror = () => { /* auto-reconnect */ };
+    void load().then((done) => {
+      if (done || cancelled) return;
+      interval = setInterval(() => void load(), 3000);
+      void connect();
     });
 
     return () => {
       cancelled = true;
-      if (interval) clearInterval(interval);
-      if (es) es.close();
+      stop();
+      stopTransportRef.current = () => {};
     };
   }, [requestId]);
 
   async function handleCancel() {
-    const res = await fetch(`/api/requests/${requestId}/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cancelledBy: "GUEST" }),
-    });
-    const json = await res.json();
-    if (json.success) {
-      toast.success("Talep iptal edildi");
-    } else {
-      toast.error(json.error?.message || "İptal başarısız");
+    if (cancelling) return;
+    const capability = guestCapabilityStorage.get(requestId);
+    if (!capability) {
+      setMissingCapability(true);
+      return;
+    }
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/requests/${requestId}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-guest-capability": capability },
+        body: JSON.stringify({ cancelledBy: "GUEST" }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        stopTransportRef.current();
+        guestCapabilityStorage.remove(requestId);
+        setRequest(json.data);
+        toast.success(tr("statusCancelled"));
+      } else {
+        toast.error(json.error?.message || tr("connectionError"));
+      }
+    } catch {
+      toast.error(tr("connectionError"));
+    } finally {
+      setCancelling(false);
     }
   }
+
+  if (missingCapability) return (
+    <main className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-bold text-slate-900">{tr("requestNotFound")}</h1>
+        <p className="mt-2 text-slate-600">{tr("locationNotFound")}</p>
+        <Link href="/guest/call" className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-slate-800 px-5 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-800">{tr("callShuttle")}</Link>
+      </div>
+    </main>
+  );
 
   if (loading || !request) return <Loading fullPage />;
 
@@ -108,36 +201,59 @@ export default function GuestStatusPage() {
   const StatusIcon = iconConfig.icon;
 
   const title = isCompleted
-    ? "✅ Tamamlandı!"
+    ? tr("statusCompleted")
     : isAccepted
-      ? "🚗 Shuttle Yolda!"
+      ? tr("statusEnRoute")
       : isCancelled
-        ? "❌ İptal Edildi"
+        ? tr("statusCancelled")
         : isUnanswered
-          ? "⚠️ Sürücü Bulunamadı"
-          : "✅ Talebiniz Alındı!";
+          ? tr("requestNotFound")
+          : tr("statusReceived");
 
   const message = isCompleted
-    ? "Shuttle Call kullandığınız için teşekkür ederiz!"
+    ? tr("statusCompleted")
     : isAccepted
-      ? "Kısa bir süre içerisinde aracınız konumunuza ulaşmış olacak..."
+      ? tr("statusEnRoute")
       : isCancelled
-        ? "Talebiniz iptal edilmiştir."
+        ? tr("statusCancelled")
         : isUnanswered
-          ? "Müsait sürücü bulunamadı. Lütfen tekrar deneyin."
-          : "Shuttle çağrınız başarıyla gönderildi. Sürücü aranıyor...";
+          ? tr("requestNotFound")
+          : tr("statusSearching");
 
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : null;
 
   return (
-    <div
-      className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50"
+    <main
+      className="guest-ui min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="w-full max-w-[540px]">
+        {/* Language selector — top right */}
+        <div className="flex justify-end mb-2">
+          <div className="relative group">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/70 backdrop-blur-sm text-slate-700 border border-slate-200 hover:bg-white transition-colors">
+              <Globe className="w-3.5 h-3.5" />
+              <span>{LOCALES.find(l => l.code === locale)?.flag}</span>
+            </button>
+            <div className="absolute right-0 top-full mt-1 hidden group-hover:block hover:block z-50 bg-white rounded-xl shadow-xl border border-slate-200 py-1 min-w-[160px]">
+              {LOCALES.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => changeLocale(l.code)}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
+                >
+                  <span className="text-base">{l.flag}</span>
+                  <span>{l.nativeLabel}</span>
+                  {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Status Icon + Title */}
-        <div className="text-center mb-6" style={{ animation: "fadeInDown 0.6s ease-out" }}>
+        <div className="text-center mb-6" role="status" aria-live="polite" aria-atomic="true" style={{ animation: "fadeInDown 0.6s ease-out" }}>
           <div
             className="w-24 h-24 mx-auto mb-5 rounded-full flex items-center justify-center"
             style={{
@@ -167,7 +283,7 @@ export default function GuestStatusPage() {
                 <Check className="w-5 h-5" />
               </div>
               <div className="flex-1 pt-2">
-                <div className="text-base font-semibold text-emerald-600 mb-1">Talep Oluşturuldu</div>
+                <div className="text-base font-semibold text-emerald-600 mb-1">{tr("statusReceived")}</div>
                 <div className="text-sm text-gray-500">{fmtTime(request.requestedAt)}</div>
               </div>
             </div>
@@ -196,7 +312,7 @@ export default function GuestStatusPage() {
                   className="text-base font-semibold mb-1"
                   style={{ color: isAccepted ? "#059669" : "#d97706" }}
                 >
-                  İşleme Alındı
+                  {tr("statusSearching")}
                 </div>
                 <div
                   className="text-sm font-semibold"
@@ -204,7 +320,7 @@ export default function GuestStatusPage() {
                 >
                   {isAccepted && request.acceptedAt
                     ? fmtTime(request.acceptedAt)
-                    : "Bekleniyor..."}
+                    : tr("loading")}
                 </div>
               </div>
             </div>
@@ -215,7 +331,7 @@ export default function GuestStatusPage() {
                 <CheckCircle className="w-5 h-5" />
               </div>
               <div className="flex-1 pt-2">
-                <div className="text-base font-semibold text-slate-600 mb-1">Tamamlandı</div>
+                <div className="text-base font-semibold text-slate-600 mb-1">{tr("statusCompleted")}</div>
                 <div className="text-sm text-gray-400">
                   {request.completedAt ? fmtTime(request.completedAt) : "-"}
                 </div>
@@ -236,17 +352,20 @@ export default function GuestStatusPage() {
             <div className="flex items-center gap-4">
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-white"
-                style={{ background: "linear-gradient(135deg, #1a2b4a, #2a3b5a)" }}
+                style={{ background: `linear-gradient(135deg, ${config.accentColor}, ${config.accentColor}dd)` }}
               >
                 <Car className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-base font-bold text-slate-800 mb-1">
-                  {request.acceptedByDriver?.fullName || "Shuttle"}
-                </h4>
+                {config.showDriverName && (
+                  <h4 className="text-base font-bold text-slate-800 mb-1">
+                    {request.acceptedByDriver?.fullName || "Shuttle"}
+                  </h4>
+                )}
                 <p className="text-sm text-slate-500">
-                  Talebiniz <span className="font-semibold">{request.buggy.code}</span> plakalı
-                  shuttle tarafından işleme alınmıştır.
+                  Talebiniz {config.showBuggyCode && (
+                    <span className="font-semibold">{request.buggy.code}</span>
+                  )} {tr("vehicle")}
                 </p>
               </div>
             </div>
@@ -263,9 +382,9 @@ export default function GuestStatusPage() {
             }}
           >
             <CheckCircle className="w-12 h-12 text-emerald-600 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-emerald-600 mb-2">✅ Tamamlandı!</h3>
+            <h3 className="text-xl font-bold text-emerald-600 mb-2">✅ {tr("statusCompleted")}</h3>
             <p className="text-base text-emerald-700 font-semibold">
-              Shuttle Call kullandığınız için teşekkür ederiz! 🙏
+              {tr("statusCompleted")}
             </p>
           </div>
         )}
@@ -274,23 +393,47 @@ export default function GuestStatusPage() {
         <div className="bg-white rounded-2xl p-4 shadow-sm mb-4">
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Lokasyon:</span>
+              <span className="text-gray-500">{tr("location")}:</span>
               <span className="font-medium">{request.location.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Talep No:</span>
+              <span className="text-gray-500">{tr("requestNumber")}:</span>
               <span className="font-medium">#{request.id}</span>
             </div>
+            {request.guestName && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">{tr("name")}:</span>
+                <span className="font-medium">{request.guestName}</span>
+              </div>
+            )}
+            {request.roomNumber && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">{tr("room")}:</span>
+                <span className="font-medium">{request.roomNumber}</span>
+              </div>
+            )}
+            {request.phone && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">{tr("phoneLabel")}:</span>
+                <span className="font-medium">{request.phone}</span>
+              </div>
+            )}
+            {request.notes && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">{tr("notes")}:</span>
+                <span className="font-medium text-xs max-w-[200px] truncate">{request.notes}</span>
+              </div>
+            )}
             {request.buggy && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Shuttle:</span>
+                <span className="text-gray-500">{tr("vehicle")}:</span>
                 <span className="font-medium">
                   {request.buggy.icon} {request.buggy.code}
                 </span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-gray-500">Saat:</span>
+              <span className="text-gray-500">{tr("time")}:</span>
               <span className="font-medium">{fmtTime(request.requestedAt)}</span>
             </div>
           </div>
@@ -300,17 +443,19 @@ export default function GuestStatusPage() {
         {(isPending || isAccepted) && (
           <button
             onClick={handleCancel}
-            className="w-full py-4 rounded-[14px] text-base font-bold text-white transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2"
+            disabled={cancelling}
+            aria-busy={cancelling}
+            className="w-full py-4 rounded-[14px] text-base font-bold text-white transition-[transform,opacity,box-shadow] duration-200 ease-out hover:-translate-y-0.5 flex items-center justify-center gap-2"
             style={{
               background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
               boxShadow: "0 4px 12px rgba(239,68,68,0.3)",
             }}
           >
             <XCircle className="w-5 h-5" />
-            <span>Talep İptal Et</span>
+            <span>{cancelling ? `${tr("cancel")}...` : tr("cancel")}</span>
           </button>
         )}
       </div>
-    </div>
+    </main>
   );
 }

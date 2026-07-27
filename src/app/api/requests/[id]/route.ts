@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { RequestService } from "@/services/request-service";
 import { apiSuccess, apiError } from "@/lib/api-response";
-import { withAuth, withRateLimit, toRouteHandler } from "@/lib/middleware";
+import { withRateLimit, toRouteHandler } from "@/lib/middleware";
 
 // Public GET — guest fetches own request status (no auth, rate-limited)
 export const GET = toRouteHandler(
@@ -10,7 +10,8 @@ export const GET = toRouteHandler(
     { limit: 30, window: 60 },
     async (_req: NextRequest, ctx) => {
       try {
-        const request = await RequestService.getByIdPublic(Number(ctx.params!.id));
+        const id = Number(ctx.params!.id);
+        const request = await RequestService.getByIdPublic(id, _req.headers.get("x-guest-capability"));
         return apiSuccess(request);
       } catch (err) {
         const status = (err as { statusCode?: number }).statusCode || 500;

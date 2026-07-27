@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { ApiError } from "@/lib/api-response";
 import { logAudit } from "@/lib/audit";
 import { Prisma } from "@prisma/client";
+import { deleteLocationLogo } from "@/lib/location-upload";
 
 export const LocationService = {
   async list(hotelId: number, params?: { search?: string; isActive?: boolean; page?: number; pageSize?: number }) {
@@ -128,7 +129,9 @@ export const LocationService = {
       return { deactivated: true, location };
     }
 
+    const location = await this.getById(hotelId, id);
     await prisma.location.delete({ where: { id } });
+    await deleteLocationLogo(location.logo);
     await logAudit({
       hotelId,
       userId,

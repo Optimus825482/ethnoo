@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateToken, hashToken } from "@/lib/utils";
 import bcrypt from "bcryptjs";
+import { getEnv } from "@/env";
 
 const SESSION_DURATION_HOURS = 24;
 const SESSION_DURATION_MS = SESSION_DURATION_HOURS * 60 * 60 * 1000;
@@ -13,6 +14,7 @@ export interface SessionUser {
   role: "ADMIN" | "DRIVER";
   fullName: string;
   isActive: boolean;
+  driverStatus: "ON_DUTY" | "OFF_DUTY";
 }
 
 export interface SessionInfo {
@@ -58,6 +60,7 @@ export async function createSession(
 
 export async function validateSession(
   token: string,
+  options: { allowInactive?: boolean } = {},
 ): Promise<ValidatedSession | null> {
   if (!token) return null;
   const tokenHash = hashToken(token);
@@ -73,6 +76,7 @@ export async function validateSession(
           role: true,
           fullName: true,
           isActive: true,
+          driverStatus: true,
           hotel: { select: { isActive: true } },
         },
       },
@@ -82,7 +86,7 @@ export async function validateSession(
   if (!session || !session.isActive || session.expiresAt < new Date()) {
     return null;
   }
-  if (!session.user.isActive || !session.user.hotel?.isActive) {
+  if (!options.allowInactive && (!session.user.isActive || !session.user.hotel?.isActive)) {
     return null;
   }
 
@@ -94,6 +98,7 @@ export async function validateSession(
       role: session.user.role,
       fullName: session.user.fullName,
       isActive: session.user.isActive,
+      driverStatus: session.user.driverStatus,
     },
     session: {
       id: session.id,
@@ -121,7 +126,7 @@ export function setSessionCookie(res: NextResponse, token: string): void {
   res.cookies.set("session_token", token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: getEnv().NODE_ENV === "production",
     maxAge: SESSION_DURATION_MS / 1000,
     path: "/",
   });
@@ -131,7 +136,7 @@ export function clearSessionCookie(res: NextResponse): void {
   res.cookies.set("session_token", "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: getEnv().NODE_ENV === "production",
     maxAge: 0,
     path: "/",
   });

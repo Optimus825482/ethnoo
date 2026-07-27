@@ -1,101 +1,59 @@
+import { randomBytes } from "node:crypto";
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { withAuth, toRouteHandler } from "@/lib/middleware";
 import { logAudit } from "@/lib/audit";
+import { deleteLocationLogo, detectImageType, LOCATION_LOGO_URL_PREFIX, MAX_LOGO_BYTES, storeLocationLogo } from "@/lib/location-upload";
 
-// POST /api/locations/[id]/logo — upload logo image
 export const POST = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   try {
     const id = Number(ctx.params!.id);
+    if (!Number.isSafeInteger(id) || id < 1) return apiError("Invalid location", 400, "INVALID_LOCATION");
 
-    const location = await prisma.location.findFirst({
-      where: { id, hotelId: ctx.user!.hotelId },
-    });
+    const location = await prisma.location.findFirst({ where: { id, hotelId: ctx.user!.hotelId } });
     if (!location) return apiError("Location not found", 404, "LOCATION_NOT_FOUND");
 
-    // Parse multipart form
-    const formData = await req.formData();
-    const file = formData.get("logo") as File | null;
-    if (!file) return apiError("Logo dosyası gerekli", 400, "FILE_REQUIRED");
+    const value = (await req.formData()).get("logo");
+    if (!(value instanceof File)) return apiError("Logo dosyası gerekli", 400, "FILE_REQUIRED");
+    if (value.size === 0 || value.size > MAX_LOGO_BYTES) return apiError("Dosya boyutu geçersiz (maks 500KB)", 400, "LOGO_TOO_LARGE");
 
-    if (file.size > 500 * 1024) {
-      return apiError("Dosya çok büyük (maks 500KB)", 400, "LOGO_TOO_LARGE");
+    const buffer = Buffer.from(await value.arrayBuffer());
+    const type = detectImageType(buffer);
+    if (!type || value.type !== type.mime) return apiError("Sadece PNG, JPEG veya WebP", 400, "INVALID_TYPE");
+
+    const filename = `location-${id}-${randomBytes(16).toString("hex")}.${type.ext}`;
+    await storeLocationLogo(filename, buffer);
+    const logoUrl = `${LOCATION_LOGO_URL_PREFIX}${filename}`;
+
+    try {
+      await prisma.location.update({ where: { id }, data: { logo: logoUrl } });
+    } catch (error) {
+      await deleteLocationLogo(logoUrl);
+      throw error;
     }
-    if (!file.type.startsWith("image/")) {
-      return apiError("Sadece resim dosyası", 400, "INVALID_TYPE");
-    }
+    await deleteLocationLogo(location.logo);
 
-    // Read file as buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "png";
-    const filename = `location-${id}-${Date.now()}.${ext}`;
-    const uploadDir = "public/images/locations";
-    const filePath = `${uploadDir}/${filename}`;
-
-    // Ensure directory exists
-    const fs = require("fs");
-    const path = require("path");
-    const dir = path.join(process.cwd(), uploadDir);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    // Write file
-    fs.writeFileSync(path.join(process.cwd(), filePath), buffer);
-
-    const logoUrl = `/api/uploads/images/locations/${filename}`;
-
-    // Update DB
-    await prisma.location.update({
-      where: { id },
-      data: { logo: logoUrl },
-    });
-
-    await logAudit({
-      hotelId: ctx.user!.hotelId,
-      userId: ctx.user!.id,
-      action: "UPDATE_LOCATION_LOGO",
-      entityType: "Location",
-      entityId: id,
-    });
-
+    await logAudit({ hotelId: ctx.user!.hotelId, userId: ctx.user!.id, action: "UPDATE_LOCATION_LOGO", entityType: "Location", entityId: id });
     return apiSuccess({ logo: logoUrl });
-  } catch (err: any) {
+  } catch (err) {
     console.error("[logo upload]", err);
-    return apiError(err.message || "Yükleme başarısız", 500, "SERVER_ERROR");
+    return apiError("Yükleme başarısız", 500, "SERVER_ERROR");
   }
-}));
+}, { role: "ADMIN" }));
 
-// DELETE /api/locations/[id]/logo — remove logo
 export const DELETE = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   try {
     const id = Number(ctx.params!.id);
-    const location = await prisma.location.findFirst({
-      where: { id, hotelId: ctx.user!.hotelId },
-    });
+    if (!Number.isSafeInteger(id) || id < 1) return apiError("Invalid location", 400, "INVALID_LOCATION");
+    const location = await prisma.location.findFirst({ where: { id, hotelId: ctx.user!.hotelId } });
     if (!location) return apiError("Location not found", 404, "LOCATION_NOT_FOUND");
 
-    // Delete file if exists
-    if (location.logo && location.logo.startsWith("/images/")) {
-      const fs = require("fs");
-      const path = require("path");
-      const filePath = path.join(process.cwd(), "public", location.logo);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    await prisma.location.update({
-      where: { id },
-      data: { logo: null },
-    });
-
+    await prisma.location.update({ where: { id }, data: { logo: null } });
+    await deleteLocationLogo(location.logo);
     return apiSuccess({ removed: true });
   } catch (err) {
     console.error("[logo delete]", err);
     return apiError("Silme başarısız", 500, "SERVER_ERROR");
   }
-}));
+}, { role: "ADMIN" }));

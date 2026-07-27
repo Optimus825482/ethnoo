@@ -166,6 +166,33 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .guest-ui .hover\:-translate-y-0\.5:hover {
+    transform: translateY(-0.125rem);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .guest-ui .hover\:-translate-y-0\.5:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .guest-ui,
+  .guest-ui *,
+  .guest-ui *::before,
+  .guest-ui *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Prevent overscroll bounce on mobile */
 body {
   overscroll-behavior: none;

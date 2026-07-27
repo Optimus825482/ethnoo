@@ -18,7 +18,7 @@ class MockEventSource {
   emit(obj: unknown) { this.onmessage?.({ data: JSON.stringify(obj) }); }
   close() {}
 }
-(globalThis as any).EventSource = MockEventSource;
+Object.defineProperty(globalThis, "EventSource", { value: MockEventSource, configurable: true });
 
 const stateResponse = {
   success: true,

@@ -11,6 +11,12 @@ export default defineConfig({
     include: ["tests/**/*.test.tsx"],
     testTimeout: 10000,
     css: true,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      reportsDirectory: "./coverage/frontend",
+      // Report only until a measured baseline defines enforceable thresholds.
+    },
   },
   resolve: {
     alias: {

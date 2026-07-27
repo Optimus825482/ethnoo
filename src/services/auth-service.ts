@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { hashPassword, comparePassword, createSession, revokeAllUserSessions, setSessionCookie, clearSessionCookie } from "@/lib/auth";
+import { hashPassword, comparePassword, createSession, revokeAllUserSessions } from "@/lib/auth";
 import { ApiError } from "@/lib/api-response";
 import { logAudit } from "@/lib/audit";
 import type { AuthContext } from "@/types";
@@ -98,7 +98,7 @@ export const AuthService = {
     };
   },
 
-  async changePassword(ctx: AuthContext, currentPassword: string, newPassword: string) {
+  async changePassword(ctx: AuthContext, currentPassword: string, newPassword: string, email?: string) {
     const user = await prisma.user.findUnique({ where: { id: ctx.user.id } });
     if (!user) throw new ApiError(404, "User not found", "USER_NOT_FOUND");
 
@@ -113,6 +113,7 @@ export const AuthService = {
       data: {
         passwordHash: newHash,
         mustChangePassword: false,
+        ...(email ? { email } : {}),
       },
     });
 

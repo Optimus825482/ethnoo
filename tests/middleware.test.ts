@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import {
@@ -55,6 +54,7 @@ describe("toRouteHandler", () => {
 describe("withRateLimit", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.stubEnv("TRUST_PROXY", "true");
   });
 
   it("allows requests within limit", async () => {
@@ -110,7 +110,7 @@ describe("withRateLimit", () => {
     // First request from IP A
     const reqA1 = new NextRequest(
       new Request("http://localhost/test", {
-        headers: { "x-forwarded-for": "10.0.0.3" },
+        headers: { "x-forwarded-for": "10.0.0.3, 192.0.2.1" },
       }),
     );
     expect((await wrapped(reqA1, {})).status).toBe(200);
@@ -118,7 +118,7 @@ describe("withRateLimit", () => {
     // First request from IP B (should still work)
     const reqB1 = new NextRequest(
       new Request("http://localhost/test", {
-        headers: { "x-forwarded-for": "10.0.0.4" },
+        headers: { "x-forwarded-for": "10.0.0.4, 192.0.2.1" },
       }),
     );
     expect((await wrapped(reqB1, {})).status).toBe(200);
@@ -126,7 +126,7 @@ describe("withRateLimit", () => {
     // Second request from IP A (should be blocked)
     const reqA2 = new NextRequest(
       new Request("http://localhost/test", {
-        headers: { "x-forwarded-for": "10.0.0.3" },
+        headers: { "x-forwarded-for": "10.0.0.3, 192.0.2.1" },
       }),
     );
     expect((await wrapped(reqA2, {})).status).toBe(429);

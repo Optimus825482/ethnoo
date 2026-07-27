@@ -208,6 +208,10 @@ model BuggyRequest {
   guestFcmToken          String?       @map("guest_fcm_token") @db.VarChar(500)
   guestFcmTokenExpiresAt DateTime?     @map("guest_fcm_token_expires_at")
   guestPushSubscription  String?       @map("guest_push_subscription") @db.Text
+  guestCapabilityHash    String?       @unique @map("guest_capability_hash") @db.VarChar(64)
+  guestSseTicketHash     String?       @unique @map("guest_sse_ticket_hash") @db.VarChar(64)
+  guestSseTicketExpiresAt DateTime?    @map("guest_sse_ticket_expires_at")
+  guestSseTicketUsedAt   DateTime?     @map("guest_sse_ticket_used_at")
   status                 RequestStatus @default(PENDING)
   cancelledBy            CancelledBy?  @map("cancelled_by")
   requestedAt            DateTime      @default(now()) @map("requested_at")

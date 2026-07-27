@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eventBus } from "@/lib/event-bus";
+import { consumeGuestSseTicket } from "@/lib/guest-capability";
+import { apiError } from "@/lib/api-response";
 
 // Public SSE — guest tracks request status (no auth)
 export async function GET(
@@ -7,7 +9,11 @@ export async function GET(
   { params }: { params: Promise<{ requestId: string }> },
 ) {
   const { requestId } = await params;
-  const channel = `request:${requestId}`;
+  const id = Number(requestId);
+  if (!(await consumeGuestSseTicket(id, req.nextUrl.searchParams.get("ticket")))) {
+    return apiError("Request not found", 404, "REQUEST_NOT_FOUND");
+  }
+  const channel = `request:${id}`;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -20,7 +26,7 @@ export async function GET(
         }
       };
 
-      send(JSON.stringify({ type: "connected", requestId: Number(requestId) }));
+      send(JSON.stringify({ type: "connected", requestId: id }));
 
       const unsubscribe = eventBus.subscribe(channel, send);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,19 @@ import { toast } from "sonner";
 export default function ChangePasswordPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [needsEmail, setNeedsEmail] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data?.user) {
+          setNeedsEmail(!json.data.user.email);
+        }
+      })
+      .finally(() => setChecking(false));
+  }, []);
 
   const {
     register,
@@ -47,6 +60,8 @@ export default function ChangePasswordPage() {
     }
   }
 
+  if (checking) return <Loading fullPage />;
+
   return (
     <div className="flex flex-1 items-center justify-center p-4 min-h-screen">
       <div className="w-full max-w-sm space-y-6">
@@ -76,11 +91,26 @@ export default function ChangePasswordPage() {
               type="password"
               {...register("newPassword")}
             />
-            <p className="text-xs text-muted-foreground">Min 8 chars, must include upper, lower, number, special char</p>
+            <p className="text-xs text-muted-foreground">En az 6 karakter</p>
             {errors.newPassword?.message && (
               <p className="text-xs text-destructive">{errors.newPassword.message}</p>
             )}
           </div>
+          {needsEmail && (
+            <div className="space-y-2">
+              <Label htmlFor="email">E-posta Adresi</Label>
+              <Input
+                id="email" autoComplete="email"
+                type="email"
+                placeholder="ornek@ethnohotels.com"
+                {...register("email")}
+              />
+              <p className="text-xs text-muted-foreground">E-posta adresinizi girmeniz zorunludur</p>
+              {errors.email?.message && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+          )}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? <Loading size={16} /> : "Change Password"}
           </Button>

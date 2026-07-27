@@ -11,4 +11,4 @@ export const POST = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));

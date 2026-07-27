@@ -18,4 +18,4 @@ export const GET = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     to,
   );
   return apiSuccess(perf);
-}));
+}, { role: "ADMIN" }));

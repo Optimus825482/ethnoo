@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/api-response";
-import { hashToken } from "@/lib/utils";
+import { validateSession } from "@/lib/auth";
 
 // --- Context that flows through composed HOFs ---
 
@@ -13,6 +14,7 @@ export interface AuthUser {
   role: "ADMIN" | "DRIVER";
   fullName: string;
   isActive: boolean;
+  driverStatus: "ON_DUTY" | "OFF_DUTY";
 }
 
 export interface AuthSession {
@@ -33,7 +35,7 @@ export interface AuthSession {
  *
  * Dynamic route `params` are resolved from Next.js context.
  */
-export interface RequestContext {
+export interface RequestContext extends Record<string, unknown> {
   /** Populated by withAuth. */
   user?: AuthUser;
   /** Convenience: same as user.hotelId. Populated by withAuth. */
@@ -64,36 +66,56 @@ export type InnerHandler = (
 export type NextRouteHandler = (
   request: NextRequest,
   context: { params: Promise<Record<string, string | string[]>> },
-) => Promise<Response | void> | Response | void;
+) => Promise<Response> | Response;
 
 // --- In-memory sliding-window rate limiter ---
 // ponytail: replace with Redis when running multiple instances
 
 interface RateLimitEntry {
   timestamps: number[];
+  expiresAt: number;
 }
 
+const MAX_RATE_LIMIT_KEYS = 10_000;
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
-function checkRateLimit(
-  key: string,
-  limit: number,
-  windowSec: number,
-): boolean {
+function checkRateLimit(key: string, limit: number, windowSec: number): boolean {
   const now = Date.now();
   const windowMs = windowSec * 1000;
-  const entry = rateLimitStore.get(key) ?? { timestamps: [] };
+  for (const [storedKey, entry] of rateLimitStore) {
+    if (entry.expiresAt <= now) rateLimitStore.delete(storedKey);
+  }
+  if (!rateLimitStore.has(key) && rateLimitStore.size >= MAX_RATE_LIMIT_KEYS) {
+    rateLimitStore.delete(rateLimitStore.keys().next().value!);
+  }
 
-  entry.timestamps = entry.timestamps.filter((t) => now - t < windowMs);
-
+  const entry = rateLimitStore.get(key) ?? { timestamps: [], expiresAt: now + windowMs };
+  entry.timestamps = entry.timestamps.filter((timestamp) => now - timestamp < windowMs);
+  entry.expiresAt = now + windowMs;
   if (entry.timestamps.length >= limit) {
     rateLimitStore.set(key, entry);
     return false;
   }
-
   entry.timestamps.push(now);
   rateLimitStore.set(key, entry);
   return true;
+}
+
+function fallbackFingerprint(req: NextRequest): string {
+  return `fallback:${createHash("sha256").update([
+    req.headers.get("user-agent") ?? "",
+    req.headers.get("accept-language") ?? "",
+    req.headers.get("accept-encoding") ?? "",
+  ].join("\0")).digest("hex")}`;
+}
+
+function getClientAddress(req: NextRequest): string {
+  // One fixed trusted hop: use the address nearest controlled Traefik, never the leftmost claim.
+  if (process.env.TRUST_PROXY === "true") {
+    const chain = req.headers.get("x-forwarded-for")?.split(",").map((ip) => ip.trim()).filter(Boolean);
+    if (chain?.length) return chain.at(-1)!;
+  }
+  return fallbackFingerprint(req);
 }
 
 // --- Internal helpers ---
@@ -155,53 +177,29 @@ export function withAuth(
         return apiError("Authentication required", 401, "UNAUTHORIZED");
       }
 
-      const tokenHash = hashToken(token);
-      const session = await prisma.session.findUnique({
-        where: { tokenHash },
-        include: {
-          user: {
-            select: {
-              id: true,
-              hotelId: true,
-              username: true,
-              role: true,
-              fullName: true,
-              isActive: true,
-              hotel: { select: { isActive: true } },
-            },
-          },
-        },
-      });
-
-      if (!session || !session.isActive || session.expiresAt < new Date()) {
+      const validated = await validateSession(token, { allowInactive: true });
+      if (!validated) {
         return apiError("Session expired or invalid", 401, "SESSION_EXPIRED");
       }
-      if (!session.user.isActive) {
+      const { session, user } = validated;
+      if (!user.isActive) {
         return apiError("User account is inactive", 403, "USER_INACTIVE");
       }
-      if (!session.user.hotel?.isActive) {
+      const hotel = await prisma.hotel.findUnique({
+        where: { id: user.hotelId },
+        select: { isActive: true },
+      });
+      if (!hotel?.isActive) {
         return apiError("Hotel is inactive", 403, "HOTEL_INACTIVE");
       }
-      if (options?.role && session.user.role !== options.role) {
+      if (options?.role && user.role !== options.role) {
         return apiError("Insufficient permissions", 403, "FORBIDDEN");
       }
 
       // Touch last activity; failure must not break the request.
       await prisma.session
-        .update({
-          where: { id: session.id },
-          data: { lastActivity: new Date() },
-        })
+        .update({ where: { id: session.id }, data: { lastActivity: new Date() } })
         .catch(() => {});
-
-      const user: AuthUser = {
-        id: session.user.id,
-        hotelId: session.user.hotelId,
-        username: session.user.username,
-        role: session.user.role,
-        fullName: session.user.fullName,
-        isActive: session.user.isActive,
-      };
 
       ctx.user = user;
       ctx.hotelId = user.hotelId;
@@ -277,9 +275,7 @@ export function withRateLimit(
   handler: InnerHandler,
 ): InnerHandler {
   return async (req, ctx) => {
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-    const rateKey = `${key}:${ip}`;
+    const rateKey = `${key}:${getClientAddress(req)}`;
 
     if (!checkRateLimit(rateKey, options.limit, options.window)) {
       return apiError(
@@ -305,8 +301,8 @@ export function withRateLimit(
  *   withRateLimit(k, o, withAuth(withValidation(s, handler)))
  */
 export function compose(
-  ...layers: Array<(h: InnerHandler) => InnerHandler>
+  ...layers: Array<(h: never) => InnerHandler>
 ): (handler: InnerHandler) => InnerHandler {
   return (handler) =>
-    layers.reduceRight<InnerHandler>((acc, layer) => layer(acc), handler);
+    layers.reduceRight<InnerHandler>((acc, layer) => layer(acc as never), handler);
 }

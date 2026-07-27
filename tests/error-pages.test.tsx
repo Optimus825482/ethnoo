@@ -16,15 +16,14 @@ describe("Error page", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
-  it("renders error message", () => {
+  it("does not expose internal error details", () => {
     render(<ErrorPage error={new Error("Test error")} reset={() => {}} />);
-    expect(screen.getByText("Test error")).toBeInTheDocument();
+    expect(screen.queryByText("Test error")).not.toBeInTheDocument();
   });
 
   it("renders heading", () => {
     render(<ErrorPage error={new Error("Something went wrong")} reset={() => {}} />);
-    // Appears in both CardTitle and error message paragraph
-    expect(screen.getAllByText("Something went wrong").length).toBe(2);
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
   it("renders Try again button", () => {
@@ -43,12 +42,12 @@ describe("Error page", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const testError = new Error("Logged error");
     render(<ErrorPage error={testError} reset={() => {}} />);
-    expect(consoleSpy).toHaveBeenCalledWith(testError);
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"client error boundary"'));
   });
 
   it("displays fallback message when error has no message", () => {
     render(<ErrorPage error={new Error()} reset={() => {}} />);
-    expect(screen.getByText("An unexpected error occurred.")).toBeInTheDocument();
+    expect(screen.getByText("An unexpected error occurred. Reference: unavailable")).toBeInTheDocument();
   });
 });
 

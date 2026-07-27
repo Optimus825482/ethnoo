@@ -1,10 +1,20 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Loading } from "@/components/ui/loading";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { MapPin, Send, Clock as ClockIcon, X, Check, HelpCircle } from "lucide-react";
+import { MapPin, Send, Clock as ClockIcon, X, Check, HelpCircle, User, DoorOpen, Phone, Globe } from "lucide-react";
+import { guestCapabilityStorage } from "@/lib/guest-capability-storage";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { GuestPageConfig, FieldMode, CustomField, defaultGuestPageConfig } from "@/lib/guest-page-config";
+import { __, LOCALES, getInitialLocale, setLocale, type SupportedLocale, type TranslationKeys } from "@/lib/i18n";
 
 interface Location {
   id: number;
@@ -18,29 +28,41 @@ export default function GuestCallPage() {
   const searchParams = useSearchParams();
   const locationId = searchParams.get("location");
   const [location, setLocation] = useState<Location | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(locationId));
   const [submitting, setSubmitting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const [clock, setClock] = useState("--:--:--");
   const [imgError, setImgError] = useState(false);
+  const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
   const rippleRef = useRef<HTMLSpanElement>(null);
 
-  // Clock — Europe/Nicosia timezone
+  function tr(key: TranslationKeys): string { return __(locale, key); }
+
+  function changeLocale(l: SupportedLocale) {
+    setLocaleState(l);
+    setLocale(l);
+  }
+
+  // Config from admin designer
+  const [config, setConfig] = useState<GuestPageConfig>(defaultGuestPageConfig);
+
+  // Guest form state
+  const [guestName, setGuestName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+  const [phone, setPhone] = useState("");
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+
+  // Clock
   useEffect(() => {
     const tick = () => {
       try {
         const now = new Date();
         const cyprus = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Nicosia" }));
-        const h = String(cyprus.getHours()).padStart(2, "0");
-        const m = String(cyprus.getMinutes()).padStart(2, "0");
-        const s = String(cyprus.getSeconds()).padStart(2, "0");
-        setClock(`${h}:${m}:${s}`);
+        setClock(`${String(cyprus.getHours()).padStart(2, "0")}:${String(cyprus.getMinutes()).padStart(2, "0")}:${String(cyprus.getSeconds()).padStart(2, "0")}`);
       } catch {
         const now = new Date();
-        setClock(
-          `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`,
-        );
+        setClock(`${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`);
       }
     };
     tick();
@@ -50,186 +72,284 @@ export default function GuestCallPage() {
 
   // Load location
   useEffect(() => {
-    if (!locationId) {
-      toast.error("Konum bilgisi eksik");
-      setLoading(false);
-      return;
-    }
+    if (!locationId) { toast.error(tr("locationNotFound")); return; }
     fetch(`/api/locations/${locationId}`)
       .then((r) => r.json())
-      .then((json) => {
-        if (json.success) setLocation(json.data);
-        else toast.error("Konum bulunamadı");
-      })
-      .catch(() => toast.error("Bağlantı hatası"))
+      .then((json) => { if (json.success) setLocation(json.data); else toast.error(tr("locationNotFound")); })
+      .catch(() => toast.error(tr("connectionError")))
       .finally(() => setLoading(false));
   }, [locationId]);
 
+  // Load config from public settings endpoint
+  useEffect(() => {
+    if (!locationId) return;
+    fetch(`/api/locations/${locationId}/settings`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data.pageConfig) {
+          setConfig({ ...defaultGuestPageConfig, ...json.data.pageConfig, fields: { ...defaultGuestPageConfig.fields, ...(json.data.pageConfig.fields || {}) } });
+        } else if (json.success) {
+          // Fallback: legacy flat settings
+          setConfig(prev => ({
+            ...prev,
+            fields: {
+              guestName: json.data.guest_fields_name || "optional",
+              roomNumber: json.data.guest_fields_room || "optional",
+              phone: json.data.guest_fields_phone || "optional",
+            }
+          }));
+        }
+      })
+      .catch(() => {});
+  }, [locationId]);
+
+  // Validation
+  function validateFields(): string | null {
+    if (config.fields.guestName === "required" && !guestName.trim()) return "Lütfen adınızı girin";
+    if (config.fields.roomNumber === "required" && !roomNumber.trim()) return "Lütfen oda numaranızı girin";
+    if (config.fields.phone === "required" && !phone.trim()) return "Lütfen telefon numaranızı girin";
+    for (const cf of config.customFields) {
+      if (cf.mode === "required" && !(customValues[cf.id] || "").trim()) return `Lütfen "${cf.label}" alanını doldurun`;
+    }
+    return null;
+  }
+
+  const visibleStandardFields = [
+    config.fields.guestName !== "off",
+    config.fields.roomNumber !== "off",
+    config.fields.phone !== "off",
+  ].filter(Boolean).length;
+  const visibleCustomFields = config.customFields.filter((f) => f.mode !== "off").length;
+  const hasFormFields = visibleStandardFields > 0 || visibleCustomFields > 0;
+
   async function submitRequest() {
     if (!locationId) return;
+    const error = validateFields();
+    if (error) { toast.error(error); return; }
     setShowConfirm(false);
     setShowLoading(true);
     setSubmitting(true);
     try {
-      const res = await fetch("/api/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId: Number(locationId) }),
-      });
+      const body: Record<string, unknown> = { locationId: Number(locationId) };
+      if (guestName.trim()) body.guestName = guestName.trim();
+      if (roomNumber.trim()) body.roomNumber = roomNumber.trim();
+      if (phone.trim()) body.phone = phone.trim();
+      const res = await fetch("/api/requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
       setShowLoading(false);
-      if (json.success) {
-        toast.success("Talebiniz alındı!");
+      if (json.success && json.data?.id && json.data?.guestCapability) {
+        guestCapabilityStorage.set(json.data.id, json.data.guestCapability);
+        // Store config for status page
+        try { sessionStorage.setItem("guest-status-config", JSON.stringify(config)); } catch {}
         router.push(`/guest/status/${json.data.id}`);
+      } else if (json.success && json.data?.request?.id && json.data?.guestCapability) {
+        guestCapabilityStorage.set(json.data.request.id, json.data.guestCapability);
+        try { sessionStorage.setItem("guest-status-config", JSON.stringify(config)); } catch {}
+        router.push(`/guest/status/${json.data.request.id}`);
       } else {
-        toast.error(json.error?.message || "Talep gönderilemedi");
+        toast.error(json.error?.message || tr("connectionError"));
       }
     } catch {
       setShowLoading(false);
-      toast.error("Bağlantı hatası");
-    } finally {
-      setSubmitting(false);
-    }
+      toast.error(tr("connectionError"));
+    } finally { setSubmitting(false); }
   }
 
-  function handleButtonClick(e: React.MouseEvent) {
+  function handleButtonClick() {
     if (rippleRef.current) {
-      rippleRef.current.style.width = "0";
-      rippleRef.current.style.height = "0";
-      requestAnimationFrame(() => {
-        if (rippleRef.current) {
-          rippleRef.current.style.animation = "ripple 0.6s ease-out";
-        }
-      });
+      rippleRef.current.style.width = "0"; rippleRef.current.style.height = "0";
+      requestAnimationFrame(() => { if (rippleRef.current) rippleRef.current.style.animation = "ripple 0.6s ease-out"; });
     }
     setShowConfirm(true);
   }
 
   if (loading) return <Loading fullPage />;
-  if (!location) {
-    return (
-      <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50">
-        <p className="text-slate-500">Konum bulunamadı.</p>
-      </div>
-    );
-  }
+  if (!location) return (
+    <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-gradient-to-b from-slate-50 to-blue-50">
+      <p className="text-slate-500">{tr("locationNotFound")}</p>
+    </div>
+  );
+
+  const ICON_MAP: Record<string, React.ReactNode> = {
+    guestName: <User className="w-3.5 h-3.5" />,
+    roomNumber: <DoorOpen className="w-3.5 h-3.5" />,
+    phone: <Phone className="w-3.5 h-3.5" />,
+  };
+
+  const FIELD_LABELS: Record<string, TranslationKeys> = {
+    guestName: "yourName",
+    roomNumber: "roomNumber",
+    phone: "phone",
+  };
+
+  const FIELD_PLACEHOLDERS: Record<string, TranslationKeys> = {
+    guestName: "enterName",
+    roomNumber: "enterRoom",
+    phone: "enterPhone",
+  };
 
   return (
-    <div
-      className="min-h-[100dvh] flex flex-col max-w-[540px] mx-auto bg-gradient-to-b from-slate-50 to-blue-50"
-      style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+    <div className="guest-ui min-h-[100dvh] flex flex-col max-w-[540px] mx-auto"
+      style={{ background: `linear-gradient(to bottom, ${config.bgStartColor}, ${config.bgEndColor})`, paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {/* Header — Clock + Logo + Location */}
+      {/* Header */}
       <div className="flex flex-col items-center gap-3 px-4 pt-4 pb-2" style={{ animation: "fadeInDown 0.6s ease-out" }}>
-        {/* Clock */}
-        <div className="self-start flex items-center gap-2 px-4 py-2 rounded-full text-white font-bold text-xs sm:text-sm font-mono"
-          style={{
-            background: "linear-gradient(135deg, #1a2b4a 0%, #2c3e5a 100%)",
-            boxShadow: "0 4px 12px rgba(26,43,74,0.3)",
-            border: "2px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          <ClockIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-400" style={{ animation: "pulseDot 1s ease-in-out infinite" }} />
-          <span className="tracking-wider min-w-[70px] sm:min-w-[85px] text-center">{clock}</span>
+        {/* Language selector — top right */}
+        <div className="self-end relative group">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white border border-white/20 hover:bg-white/30 transition-colors">
+            <Globe className="w-3.5 h-3.5" />
+            <span>{LOCALES.find(l => l.code === locale)?.flag}</span>
+          </button>
+          <div className="absolute right-0 top-full mt-1 hidden group-hover:block hover:block z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200 py-1 min-w-[160px]">
+            {LOCALES.map((l) => (
+              <button
+                key={l.code}
+                onClick={() => changeLocale(l.code)}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
+              >
+                <span className="text-base">{l.flag}</span>
+                <span>{l.nativeLabel}</span>
+                {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Location Image */}
-        <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto mt-2 mb-2 relative">
-          {location.logo && !imgError ? (
-            <div className="w-full h-full rounded-3xl overflow-hidden" style={{ animation: "float 3s ease-in-out infinite" }}>
-              <img src={location.logo} alt={location.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
-            </div>
-          ) : (
-            <div className="w-full h-full rounded-3xl flex items-center justify-center text-white"
-              style={{ background: "linear-gradient(135deg, #1a2b4a 0%, #2c3e5a 100%)", animation: "float 3s ease-in-out infinite" }}
-            >
-              <MapPin className="w-12 h-12 sm:w-16 sm:h-16" />
-            </div>
-          )}
-        </div>
+        {config.showClock && (
+          <div className="self-start flex items-center gap-2 px-4 py-2 rounded-full text-white font-bold text-xs sm:text-sm font-mono"
+            style={{ background: config.accentColor, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+            <ClockIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="tracking-wider min-w-[70px] sm:min-w-[85px] text-center">{clock}</span>
+          </div>
+        )}
 
-        {/* Location Name */}
-        <h2 className="text-lg sm:text-2xl font-bold text-center px-2" style={{ color: "#1a2b4a" }}>
-          {location.name}
-        </h2>
+        {config.hotelLogo && (
+          <img src={config.hotelLogo} alt="" style={{ height: config.hotelLogoSize }} className="object-contain rounded-xl mt-2" />
+        )}
+
+        {config.locationLogo && (
+          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto mt-2 mb-2 relative">
+            {location.logo && !imgError ? (
+              <div className="w-full h-full rounded-3xl overflow-hidden">
+                <img src={location.logo} alt={location.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+              </div>
+            ) : (
+              <div className="w-full h-full rounded-3xl flex items-center justify-center text-white" style={{ background: config.accentColor }}>
+                <MapPin className="w-12 h-12 sm:w-16 sm:h-16" />
+              </div>
+            )}
+          </div>
+        )}
+
+        {config.locationName && (
+          <h2 className="text-lg sm:text-2xl font-bold text-center px-2" style={{ color: config.headerTextColor }}>
+            {location.name}
+          </h2>
+        )}
       </div>
 
-      {/* Main Content — Call Button */}
-      <div className="flex-1 flex items-center justify-center px-4 py-4">
+      {/* Guest Information Form */}
+      {hasFormFields && (
+        <div className="px-4 py-2" style={{ animation: "fadeInUp 0.6s ease-out 0.1s both" }}>
+          <Card className="border-slate-200">
+            <CardContent className="p-4 space-y-3">
+              {config.fields.guestName !== "off" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="guest-name" className="text-sm flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5" /> {tr("yourName")}
+                    {config.fields.guestName === "required" && <span className="text-red-500">*</span>}
+                  </Label>
+                  <Input id="guest-name" placeholder={tr("enterName")} value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+                </div>
+              )}
+              {config.fields.roomNumber !== "off" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="room-number" className="text-sm flex items-center gap-1.5">
+                    <DoorOpen className="w-3.5 h-3.5" /> {tr("roomNumber")}
+                    {config.fields.roomNumber === "required" && <span className="text-red-500">*</span>}
+                  </Label>
+                  <Input id="room-number" placeholder={tr("enterRoom")} value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} />
+                </div>
+              )}
+              {config.fields.phone !== "off" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="phone" className="text-sm flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" /> {tr("phone")}
+                    {config.fields.phone === "required" && <span className="text-red-500">*</span>}
+                  </Label>
+                  <Input id="phone" placeholder={tr("enterPhone")} type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+              )}
+              {config.customFields.filter(f => f.mode !== "off").map((f) => (
+                <div key={f.id} className="space-y-1.5">
+                  <Label className="text-sm flex items-center gap-1.5">
+                    {f.label}
+                    {f.mode === "required" && <span className="text-red-500">*</span>}
+                  </Label>
+                  {f.type === "textarea" ? (
+                    <Textarea placeholder={f.placeholder || `${f.label} yazın...`} value={customValues[f.id] || ""} onChange={(e) => setCustomValues(prev => ({ ...prev, [f.id]: e.target.value }))} />
+                  ) : (
+                    <Input placeholder={f.placeholder || `${f.label} yazın...`} value={customValues[f.id] || ""} onChange={(e) => setCustomValues(prev => ({ ...prev, [f.id]: e.target.value }))} />
+                  )}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Call Button */}
+      <div className="flex-1 px-4 py-4">
         <div className="w-full" style={{ animation: "fadeInUp 0.6s ease-out 0.2s both" }}>
           <button
             onClick={handleButtonClick}
             disabled={submitting}
-            className="w-full min-h-[56px] flex items-center justify-center gap-2.5 text-white font-bold text-base sm:text-lg rounded-2xl py-4 px-6 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 select-none touch-manipulation relative overflow-hidden"
-            style={{ background: "linear-gradient(135deg, #1a2b4a 0%, #2a3b5a 100%)", boxShadow: "0 4px 12px rgba(27,165,168,0.2)" }}
-            aria-label="Shuttle çağır"
+            className={`w-full min-h-[56px] flex items-center justify-center gap-2.5 text-white font-bold text-base sm:text-lg py-4 px-6 transition-[transform,opacity,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 select-none touch-manipulation relative overflow-hidden ${config.buttonShape === "pill" ? "rounded-full" : "rounded-2xl"}`}
+            style={{ background: config.buttonColor, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
+            aria-label={config.buttonText}
           >
             <Send className="w-5 h-5" />
-            <span>Shuttle Çağır</span>
+            <span>{tr("callShuttle")}</span>
             <span ref={rippleRef} className="absolute top-1/2 left-1/2 rounded-full pointer-events-none"
-              style={{ transform: "translate(-50%, -50%)", background: "rgba(255,255,255,0.3)", width: 0, height: 0 }}
-            />
+              style={{ transform: "translate(-50%, -50%)", background: "rgba(255,255,255,0.3)", width: 0, height: 0 }} />
           </button>
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-6 mt-auto" style={{ background: "#1a2b4a", borderTop: "2px solid #d4af37", animation: "fadeInUp 0.6s ease-out 0.4s both" }}>
-        <p className="text-white text-xs sm:text-sm font-semibold tracking-wide">Shuttle Call System © 2025</p>
+      <footer className="shrink-0 text-center py-6" style={{ background: config.footerBgColor, animation: "fadeInUp 0.6s ease-out 0.4s both" }}>
+        <p className="text-xs sm:text-sm font-semibold" style={{ color: config.footerTextColor }}>{config.footerText}</p>
       </footer>
 
-      {/* Confirmation Modal */}
-      {showConfirm && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.75)" }}
-          onClick={(e) => e.target === e.currentTarget && setShowConfirm(false)}
-        >
-          <div className="bg-white rounded-3xl w-full max-w-[400px] p-6 sm:p-8"
-            style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.3)", animation: "slideUp 0.4s cubic-bezier(0.68,-0.55,0.265,1.55)" }}
-          >
-            <div className="text-center">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-5 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", boxShadow: "0 12px 24px rgba(249,115,22,0.3)" }}
-              >
-                <HelpCircle className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
-              </div>
-
-              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">Shuttle Çağırmak İstiyor musunuz?</h3>
-              <p className="text-sm text-gray-500 mb-4 sm:mb-6">Talebinizi onaylayın</p>
-
-              <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 text-left"
-                style={{ background: "linear-gradient(135deg, rgba(27,165,168,0.08), rgba(242,140,56,0.08))", border: "2px solid rgba(27,165,168,0.2)" }}
-              >
-                <div className="flex items-center gap-3 text-sm text-slate-700">
-                  <MapPin className="w-5 h-5 shrink-0" style={{ color: "#1a2b4a" }} />
-                  <span><strong>Lokasyon:</strong> {location.name}</span>
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button onClick={() => setShowConfirm(false)}
-                  className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold transition-all hover:bg-gray-200 flex items-center justify-center gap-2"
-                  style={{ background: "#f3f4f6", color: "#6b7280" }}
-                >
-                  <X className="w-4 h-4" /><span>İptal</span>
-                </button>
-                <button onClick={submitRequest}
-                  className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold text-white transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", boxShadow: "0 6px 20px rgba(16,185,129,0.3)" }}
-                >
-                  <Check className="w-4 h-4" /><span>Evet, Çağır</span>
-                </button>
-              </div>
+      {/* Confirm Dialog */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent showCloseButton={false} className="max-w-[400px] rounded-3xl bg-white p-6 sm:p-8" style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+          <div className="text-center">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-5 rounded-full flex items-center justify-center" style={{ background: config.buttonColor, boxShadow: "0 12px 24px rgba(0,0,0,0.2)" }}>
+              <HelpCircle className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+            </div>
+            <DialogTitle className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">{tr("confirmTitle")}</DialogTitle>
+            <DialogDescription className="text-sm text-gray-500 mb-4 sm:mb-6">{tr("confirmDescription")}</DialogDescription>
+            <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 text-left" style={{ background: "rgba(0,0,0,0.03)", border: "2px solid rgba(0,0,0,0.08)" }}>
+              <div className="flex items-center gap-3 text-sm text-slate-700"><MapPin className="w-5 h-5 shrink-0" /><span><strong>{tr("location")}:</strong> {location.name}</span></div>
+              {guestName && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><User className="w-5 h-5 shrink-0" /><span><strong>{tr("name")}:</strong> {guestName}</span></div>}
+              {roomNumber && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><DoorOpen className="w-5 h-5 shrink-0" /><span><strong>{tr("room")}:</strong> {roomNumber}</span></div>}
+              {phone && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><Phone className="w-5 h-5 shrink-0" /><span><strong>{tr("phoneLabel")}:</strong> {phone}</span></div>}
+            </div>
+            <div className="flex gap-3">
+              <DialogClose className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold transition-[transform,opacity] duration-200 hover:bg-gray-200 flex items-center justify-center gap-2" style={{ background: "#f3f4f6", color: "#6b7280" }}><X className="w-4 h-4" /><span>{tr("cancel")}</span></DialogClose>
+              <button onClick={submitRequest} className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold text-white transition-[transform,opacity] duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-2" style={{ background: config.buttonColor, boxShadow: "0 6px 20px rgba(0,0,0,0.2)" }}><Check className="w-4 h-4" /><span>{tr("yesCall")}</span></button>
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Loading Overlay */}
       {showLoading && (
         <div className="fixed inset-0 z-[10001] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.75)" }}>
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-5 rounded-full border-4 border-slate-300 animate-spin" style={{ borderTopColor: "#1a2b4a" }} />
-            <p className="text-white text-base font-semibold">Shuttle çağrılıyor...</p>
+            <div className="w-16 h-16 mx-auto mb-5 rounded-full border-4 border-slate-300 animate-spin" style={{ borderTopColor: config.accentColor }} />
+            <p className="text-white text-base font-semibold">{tr("callingShuttle")}</p>
           </div>
         </div>
       )}

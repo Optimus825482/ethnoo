@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loading } from "@/components/ui/loading";
-import { MonitorMap, type MapSelection } from "@/components/monitor/monitor-map";
+import { MonitorMap3D, type MapSelection } from "@/components/monitor/monitor-map-3d";
 import { useMonitorState, initialMonitorData } from "@/hooks/use-monitor-state";
 import { playNotificationSound } from "@/lib/notification-sound";
 import { Bell, BellOff, Maximize2, Minimize2, Car, MapPin, Clock, User, Wifi, WifiOff } from "lucide-react";
@@ -27,7 +27,7 @@ function fmtWait(requestedAt: string, now: number) {
 
 export default function MonitorPage() {
   const [muted, setMuted] = useState(false);
-  const mutedRef = useState(() => ({ current: false }))[0];
+  const mutedRef = useRef(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [selection, setSelection] = useState<MapSelection>(null);
   const now = useNow();
@@ -64,23 +64,23 @@ export default function MonitorPage() {
   if (data === initialMonitorData) return <Loading fullPage />;
 
   return (
-    <div className={fullscreen ? "fixed inset-0 z-50 bg-background p-4 flex flex-col gap-4" : "space-y-4"}>
+    <div className={fullscreen ? "fixed inset-0 z-50 bg-background p-2 md:p-4 flex flex-col gap-2 md:gap-4" : "space-y-4"}>
       {/* top bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold">Canli Harita</h1>
-        <Badge variant={connected ? "default" : "destructive"} className="gap-1">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-lg md:text-2xl font-bold">Canli Harita</h1>
+        <Badge variant={connected ? "default" : "destructive"} className="gap-1 text-xs">
           {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
           {connected ? "Canli" : "Baglanti yok"}
         </Badge>
-        <div className="flex items-center gap-4 ml-auto text-sm">
-          <span className="flex items-center gap-1.5"><Bell className="w-4 h-4 text-red-500" /><b>{pending.length}</b> bekleyen</span>
-          <span className="flex items-center gap-1.5"><Car className="w-4 h-4 text-emerald-600" /><b>{availableBuggies.length}</b> musait arac</span>
-          <Button size="sm" variant="outline" onClick={() => setMuted((m) => !m)}>
-            {muted ? <BellOff className="w-4 h-4 mr-1" /> : <Bell className="w-4 h-4 mr-1" />}
+        <div className="flex items-center gap-2 ml-auto text-xs md:text-sm flex-wrap">
+          <span className="flex items-center gap-1"><Bell className="w-3.5 h-3.5 text-red-500" /><b>{pending.length}</b> bekleyen</span>
+          <span className="flex items-center gap-1"><Car className="w-3.5 h-3.5 text-emerald-600" /><b>{availableBuggies.length}</b> musait</span>
+          <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => setMuted((m) => !m)}>
+            {muted ? <BellOff className="w-3 h-3 mr-1" /> : <Bell className="w-3 h-3 mr-1" />}
             {muted ? "Ses kapali" : "Ses acik"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setFullscreen((f) => !f)}>
-            {fullscreen ? <Minimize2 className="w-4 h-4 mr-1" /> : <Maximize2 className="w-4 h-4 mr-1" />}
+          <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={() => setFullscreen((f) => !f)}>
+            {fullscreen ? <Minimize2 className="w-3 h-3 mr-1" /> : <Maximize2 className="w-3 h-3 mr-1" />}
             {fullscreen ? "Kucult" : "Tam ekran"}
           </Button>
         </div>
@@ -88,9 +88,9 @@ export default function MonitorPage() {
 
       <div className={fullscreen ? "flex-1 min-h-0" : "grid gap-4 lg:grid-cols-[1fr_340px]"}>
         {/* harita */}
-        <Card className="overflow-hidden">
+        <Card className="overflow-hidden min-h-[50vh] lg:min-h-0">
           <CardContent className="p-0 h-full">
-            <MonitorMap
+            <MonitorMap3D
               locations={data.locations}
               buggies={data.buggies}
               calls={data.requests}

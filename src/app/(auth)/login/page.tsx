@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,7 +12,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
-import { Car } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -123,10 +123,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="text-xs text-center text-muted-foreground mt-6 space-y-1">
-            <p>Demo credentials:</p>
-            <p>admin / admin123 &middot; driver1 / driver123</p>
-          </div>
         </CardContent>
       </Card>
     </div>

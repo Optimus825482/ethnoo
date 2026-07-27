@@ -166,7 +166,7 @@ describe("AuthService", () => {
       };
 
       // Create another session for the same user
-      const { session: otherSession } = await createSession(
+      await createSession(
         ctx.hotel.driver.id,
       );
 

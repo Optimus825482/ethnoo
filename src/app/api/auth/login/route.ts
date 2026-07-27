@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { z } from "zod";
 import { loginSchema } from "@/schemas/auth";
 import { AuthService } from "@/services/auth-service";
-import { apiSuccess, apiError, apiErrorHandler } from "@/lib/api-response";
+import { apiSuccess, apiError, ApiError } from "@/lib/api-response";
 import { withValidation, withRateLimit, toRouteHandler } from "@/lib/middleware";
 import { setSessionCookie } from "@/lib/auth";
 
@@ -10,14 +10,21 @@ async function handleLogin(req: NextRequest, data: { username: string; password:
   const ipAddress = req.headers.get("x-forwarded-for") || undefined;
   const userAgent = req.headers.get("user-agent") || undefined;
 
-  const result = await AuthService.login(data.username, data.password, ipAddress, userAgent);
+  try {
+    const result = await AuthService.login(data.username, data.password, ipAddress, userAgent);
 
-  const res = apiSuccess({
-    user: result.user,
-    mustChangePassword: result.user.mustChangePassword,
-  });
-  setSessionCookie(res, result.token);
-  return res;
+    const res = apiSuccess({
+      user: result.user,
+      mustChangePassword: result.user.mustChangePassword,
+    });
+    setSessionCookie(res, result.token);
+    return res;
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return apiError(err.message, err.statusCode, err.code);
+    }
+    throw err;
+  }
 }
 
 export const POST = toRouteHandler(withRateLimit(

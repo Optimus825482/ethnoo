@@ -35,7 +35,7 @@ export const POST = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));
 
 export const DELETE = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   const url = new URL(req.url);
@@ -54,4 +54,4 @@ export const DELETE = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));

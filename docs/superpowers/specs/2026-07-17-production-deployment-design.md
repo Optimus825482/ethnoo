@@ -1,5 +1,7 @@
 # ShuttleCall Production Deployment Design
 
+> **Superseded:** Historical design only. Replaced by `2026-07-26-production-hardening-design.md` and the current `README.md`. Firebase, automatic seed, and topology details below are not operational guidance.
+
 **Date:** 2026-07-17
 **Goal:** Deploy ShuttleCall to Docker server with `https://shuttlecall.com`, coexisting with existing minibar app — zero disruption.
 

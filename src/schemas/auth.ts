@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { passwordSchema } from './password'
 
 export const loginSchema = z.object({
   username: z.string().min(1, 'Username required').max(50),
@@ -8,12 +9,7 @@ export type LoginInput = z.infer<typeof loginSchema>
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1),
-  newPassword: z
-    .string()
-    .min(8)
-    .regex(/[A-Z]/)
-    .regex(/[a-z]/)
-    .regex(/[0-9]/)
-    .regex(/[^A-Za-z0-9]/, 'Must contain special character'),
+  newPassword: passwordSchema,
+  email: z.string().email('Geçerli bir e-posta adresi girin').max(255).optional(),
 })
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>

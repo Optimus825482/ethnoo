@@ -18,7 +18,7 @@ export const POST = toRouteHandler(withRateLimit(
       }
       const data = result.data;
       const authCtx: AuthContext = { user: ctx.user!, session: ctx.session! };
-      await AuthService.changePassword(authCtx, data.currentPassword, data.newPassword);
+      await AuthService.changePassword(authCtx, data.currentPassword, data.newPassword, data.email);
       return apiSuccess({ message: "Password changed successfully" });
     } catch (err) {
       const status = (err as { statusCode?: number }).statusCode || 500;

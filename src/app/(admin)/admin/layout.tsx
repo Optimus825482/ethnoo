@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-[100dvh]">
       <AdminNav user={{ fullName: json.data.user.fullName }} />
-      <main className="flex-1 overflow-auto p-4 md:p-6 pt-18 md:pt-6">
+      <main className="flex-1 overflow-auto p-4 md:p-6 pt-14 md:pt-6 max-w-full">
         {children}
       </main>
     </div>

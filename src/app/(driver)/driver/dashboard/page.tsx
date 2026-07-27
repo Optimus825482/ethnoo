@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-img-element -- Native img preserves dynamic URL/error and intrinsic sizing behavior. */
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,7 @@ import {
 import { Loading } from "@/components/ui/loading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Bell, CheckCircle, XCircle, Clock, MapPin, Power, PowerOff, Smartphone, MapPinOff } from "lucide-react";
+import { Bell, CheckCircle, XCircle, Clock, MapPin, Power, PowerOff, Smartphone } from "lucide-react";
 import { playNotificationSound } from "@/lib/notification-sound";
 
 interface Request {
@@ -81,7 +82,6 @@ export default function DriverDashboard() {
   const [pushState, setPushState] = useState<PushState>({ subscribed: false, supported: false });
   const [statusLoading, setStatusLoading] = useState(false);
   const [gpsTracking, setGpsTracking] = useState(false);
-  const gpsWatchRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -112,7 +112,7 @@ export default function DriverDashboard() {
           }
         });
     } else {
-      setDriverLocation(saved);
+      queueMicrotask(() => setDriverLocation(saved));
     }
 
     load();
@@ -147,7 +147,7 @@ export default function DriverDashboard() {
   // Check push subscription
   useEffect(() => {
     const supported = "serviceWorker" in navigator && "PushManager" in window;
-    setPushState(prev => ({ ...prev, supported }));
+    queueMicrotask(() => setPushState(prev => ({ ...prev, supported })));
     if (!supported) return;
     navigator.serviceWorker.ready.then(async (reg) => {
       const sub = await reg.pushManager.getSubscription();
@@ -159,7 +159,7 @@ export default function DriverDashboard() {
   // GPS tracked via gpsTracking state (started on accept, stopped on complete).
   useEffect(() => {
     const sendHeartbeat = (pos?: GeolocationPosition) => {
-      const body: any = { };
+      const body: { driverStatus?: DriverState["driverStatus"]; latitude?: number; longitude?: number } = {};
       if (driverState?.driverStatus) body.driverStatus = driverState.driverStatus;
       if (pos) {
         body.latitude = pos.coords.latitude;
@@ -207,7 +207,18 @@ export default function DriverDashboard() {
         if (json.success) {
           localStorage.setItem("driverLocation", driverLocation);
           setShowLocationDialog(false);
-          toast.success(`Konum: ${json.data.location?.name || "kaydedildi"}`);
+          const loc = locations.find((l) => String(l.id) === driverLocation);
+          toast.success(`Konum: ${loc?.name || "kaydedildi"}`);
+          // Refresh driver state so buggy location updates in UI
+          if (json.data.buggy?.currentLocation) {
+            setDriverState(prev => prev ? {
+              ...prev,
+              buggy: {
+                ...prev.buggy!,
+                currentLocation: { id: json.data.buggy.currentLocation.id, name: json.data.buggy.currentLocation.name },
+              },
+            } : prev);
+          }
         } else {
           toast.error(json.error?.message || "Kaydedilemedi");
         }
@@ -264,7 +275,7 @@ export default function DriverDashboard() {
       });
       setPushState({ subscribed: true, supported: true });
       toast.success("Bildirimler açıldı");
-    } catch (err) {
+    } catch {
       toast.error("Bildirim izni alınamadı");
     }
   }

@@ -28,4 +28,4 @@ export const PATCH = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     const status = (err as { statusCode?: number }).statusCode || 500;
     return apiError(err instanceof Error ? err.message : "Failed", status);
   }
-}));
+}, { role: "ADMIN" }));
