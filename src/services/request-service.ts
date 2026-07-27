@@ -192,6 +192,8 @@ export const RequestService = {
   },
 
   async accept(hotelId: number, requestId: number, driverId: number) {
+    let buggyId: number;
+    let originLocationId: number;
     const result = await prisma.$transaction(async (tx) => {
       const requests = await tx.$queryRaw<Array<{ id: number; status: string; hotel_id: number }>>`
         SELECT id, status, hotel_id FROM buggy_requests WHERE id = ${requestId} FOR UPDATE
@@ -214,6 +216,9 @@ export const RequestService = {
       const now = new Date();
       const requestRow = await tx.buggyRequest.findUnique({ where: { id: requestId } });
       if (!requestRow) throw new ApiError(404, "Request not found", "REQUEST_NOT_FOUND");
+
+      buggyId = assignment.buggyId;
+      originLocationId = requestRow.locationId;
 
       const responseTime = Math.floor((now.getTime() - requestRow.requestedAt.getTime()) / 1000);
       const reserved = await tx.buggy.updateMany({
@@ -250,11 +255,15 @@ export const RequestService = {
 
     publishSSE(`request:${requestId}`, { type: "request_accepted", requestId, driverId });
     publishSSE(`hotel:${hotelId}`, { type: "request_accepted", requestId, driverId });
+    publishSSE(`hotel:${hotelId}`, { type: "buggy_status", buggyId: buggyId!, status: "BUSY" as const });
+    publishSSE(`hotel:${hotelId}`, { type: "buggy_location", buggyId: buggyId!, locationId: originLocationId! });
 
     return result;
   },
 
   async complete(hotelId: number, requestId: number, driverId: number, completionLocationId?: number) {
+    let buggyId: number;
+    let dropoffLocationId: number;
     const result = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<Array<{ id: number; hotel_id: number; status: string; accepted_by_id: number | null; buggy_id: number | null; requested_at: Date; location_id: number }>>`
         SELECT id, hotel_id, status, accepted_by_id, buggy_id, requested_at, location_id
@@ -291,10 +300,12 @@ export const RequestService = {
       });
 
       if (request.buggy_id) {
+        buggyId = request.buggy_id;
+        dropoffLocationId = completionLocationId ?? request.location_id;
         // Set buggy to AVAILABLE at drop-off location
         await tx.buggy.update({
           where: { id: request.buggy_id },
-          data: { status: "AVAILABLE", currentLocationId: completionLocationId ?? request.location_id },
+          data: { status: "AVAILABLE", currentLocationId: dropoffLocationId },
         });
       }
 
@@ -314,6 +325,10 @@ export const RequestService = {
 
     publishSSE(`request:${requestId}`, { type: "request_completed", requestId });
     publishSSE(`hotel:${hotelId}`, { type: "request_completed", requestId });
+    if (buggyId!) {
+      publishSSE(`hotel:${hotelId}`, { type: "buggy_status", buggyId: buggyId!, status: "AVAILABLE" as const });
+      publishSSE(`hotel:${hotelId}`, { type: "buggy_location", buggyId: buggyId!, locationId: dropoffLocationId! });
+    }
     return result;
   },
 
@@ -324,6 +339,7 @@ export const RequestService = {
     userId?: number,
     reason?: string,
   ) {
+    let cancelledBuggyId: number | null = null;
     const result = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<Array<{ id: number; hotel_id: number; status: string; buggy_id: number | null; accepted_by_id: number | null }>>`
         SELECT id, hotel_id, status, buggy_id, accepted_by_id FROM buggy_requests WHERE id = ${requestId} FOR UPDATE
@@ -348,6 +364,7 @@ export const RequestService = {
       });
 
       if (request.buggy_id && request.status === "ACCEPTED") {
+        cancelledBuggyId = request.buggy_id;
         await tx.buggy.update({
           where: { id: request.buggy_id },
           data: { status: "AVAILABLE" },
@@ -370,12 +387,16 @@ export const RequestService = {
 
     publishSSE(`request:${requestId}`, { type: "request_cancelled", requestId });
     publishSSE(`hotel:${hotelId}`, { type: "request_cancelled", requestId });
+    if (cancelledBuggyId) {
+      publishSSE(`hotel:${hotelId}`, { type: "buggy_status", buggyId: cancelledBuggyId, status: "AVAILABLE" as const });
+    }
     return result;
   },
 
   // Public — guest cancels own request (no auth, derives hotelId from request)
   async cancelByGuest(requestId: number, capability: string | null) {
     if (!Number.isSafeInteger(requestId) || requestId <= 0) throw new ApiError(404, "Request not found", "REQUEST_NOT_FOUND");
+    let cancelledBuggyId: number | null = null;
     const result = await prisma.$transaction(async (tx) => {
       const rows = await tx.$queryRaw<Array<{ id: number; hotel_id: number; status: string; buggy_id: number | null; guest_capability_hash: string | null }>>`
         SELECT id, hotel_id, status, buggy_id, guest_capability_hash FROM buggy_requests WHERE id = ${requestId} FOR UPDATE
@@ -389,13 +410,19 @@ export const RequestService = {
         data: { status: "CANCELLED", cancelledBy: "GUEST", cancelledAt: new Date() },
         select: { id: true, hotelId: true, locationId: true, buggyId: true, status: true, cancelledBy: true, requestedAt: true, cancelledAt: true },
       });
-      if (existing.buggy_id && existing.status === "ACCEPTED") await tx.buggy.update({ where: { id: existing.buggy_id }, data: { status: "AVAILABLE" } });
+      if (existing.buggy_id && existing.status === "ACCEPTED") {
+        cancelledBuggyId = existing.buggy_id;
+        await tx.buggy.update({ where: { id: existing.buggy_id }, data: { status: "AVAILABLE" } });
+      }
       await tx.auditTrail.create({ data: { hotelId: existing.hotel_id, action: "CANCEL_REQUEST", entityType: "BuggyRequest", entityId: requestId, newValues: { status: "CANCELLED", cancelledBy: "GUEST" } } });
       return updated;
     });
 
     publishSSE(`request:${requestId}`, { type: "request_cancelled", requestId });
     publishSSE(`hotel:${result.hotelId}`, { type: "request_cancelled", requestId });
+    if (cancelledBuggyId) {
+      publishSSE(`hotel:${result.hotelId}`, { type: "buggy_status", buggyId: cancelledBuggyId, status: "AVAILABLE" as const });
+    }
     return result;
   },
 

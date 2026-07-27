@@ -389,56 +389,6 @@ export default function GuestStatusPage() {
           </div>
         )}
 
-        {/* Request Details Card */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm mb-4">
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">{tr("location")}:</span>
-              <span className="font-medium">{request.location.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">{tr("requestNumber")}:</span>
-              <span className="font-medium">#{request.id}</span>
-            </div>
-            {request.guestName && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{tr("name")}:</span>
-                <span className="font-medium">{request.guestName}</span>
-              </div>
-            )}
-            {request.roomNumber && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{tr("room")}:</span>
-                <span className="font-medium">{request.roomNumber}</span>
-              </div>
-            )}
-            {request.phone && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{tr("phoneLabel")}:</span>
-                <span className="font-medium">{request.phone}</span>
-              </div>
-            )}
-            {request.notes && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{tr("notes")}:</span>
-                <span className="font-medium text-xs max-w-[200px] truncate">{request.notes}</span>
-              </div>
-            )}
-            {request.buggy && (
-              <div className="flex justify-between">
-                <span className="text-gray-500">{tr("vehicle")}:</span>
-                <span className="font-medium">
-                  {request.buggy.icon} {request.buggy.code}
-                </span>
-              </div>
-            )}
-            <div className="flex justify-between">
-              <span className="text-gray-500">{tr("time")}:</span>
-              <span className="font-medium">{fmtTime(request.requestedAt)}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Cancel Button */}
         {(isPending || isAccepted) && (
           <button
