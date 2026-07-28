@@ -13,29 +13,33 @@ export const POST = toRouteHandler(
   withAuth(
     withValidation(resetSchema, async (_req: NextRequest, ctx) => {
       const adminId = ctx.user!.id;
-      const adminUsername = ctx.user!.username;
 
-      logger.warn("System reset initiated", { userId: adminId, username: adminUsername });
+      logger.warn("System reset initiated", { userId: adminId });
 
       await prisma.$transaction(async (tx) => {
-        // Delete in FK-safe order:
-        // 1. Tables that reference other tables
-        await tx.$executeRawUnsafe(`DELETE FROM "NotificationLog"`);
-        await tx.$executeRawUnsafe(`DELETE FROM "BuggyDriver"`);
-        await tx.$executeRawUnsafe(`DELETE FROM "Session"`);
-        await tx.$executeRawUnsafe(`DELETE FROM "BuggyRequest"`);
-        // 2. Tables with FK to Location
-        await tx.$executeRawUnsafe(`DELETE FROM "Buggy"`);
-        // 3. Location
-        await tx.$executeRawUnsafe(`DELETE FROM "Location"`);
-        // 4. Tables with Restrict FK to Hotel
-        await tx.$executeRawUnsafe(`DELETE FROM "AuditTrail"`);
-        // 5. Tables with Cascade FK to Hotel
-        await tx.$executeRawUnsafe(`DELETE FROM "User"`);
-        await tx.$executeRawUnsafe(`DELETE FROM "SystemSetting"`);
-        // 6. Root table
-        await tx.$executeRawUnsafe(`DELETE FROM "Hotel"`);
+        // Delete in FK-safe order using Prisma @@map table names
+        await tx.$executeRawUnsafe(`DELETE FROM notification_logs`);
+        await tx.$executeRawUnsafe(`DELETE FROM buggy_drivers`);
+        await tx.$executeRawUnsafe(`DELETE FROM sessions`);
+        await tx.$executeRawUnsafe(`DELETE FROM buggy_requests`);
+        await tx.$executeRawUnsafe(`DELETE FROM buggies`);
+        await tx.$executeRawUnsafe(`DELETE FROM locations`);
+        await tx.$executeRawUnsafe(`DELETE FROM audit_trail`);
+        await tx.$executeRawUnsafe(`DELETE FROM users`);
+        await tx.$executeRawUnsafe(`DELETE FROM system_settings`);
+        await tx.$executeRawUnsafe(`DELETE FROM hotels`);
       });
+
+      // Reset all auto-increment sequences so new records start from ID 1
+      const sequences = [
+        "hotels_id_seq", "users_id_seq", "locations_id_seq",
+        "buggies_id_seq", "buggy_drivers_id_seq", "buggy_requests_id_seq",
+        "audit_trail_id_seq", "sessions_id_seq",
+        "notification_logs_id_seq", "system_settings_id_seq",
+      ];
+      for (const seq of sequences) {
+        await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${seq} RESTART WITH 1`);
+      }
 
       logger.warn("System reset completed", { userId: adminId });
 

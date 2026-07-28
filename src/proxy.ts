@@ -36,6 +36,7 @@ export async function proxy(req: NextRequest) {
     "/api/setup",
     "/logout",
     "/api/auth/login",
+    "/api/auth/logout",
     "/api/health",
     "/guest/call",
     "/api/requests",
