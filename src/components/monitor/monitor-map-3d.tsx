@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import * as THREE from "three";
-import { CANONICAL_STOPS } from "./map-static";
 import { pxToWorld, buildStaticScene, disposeObject3D } from "./map-3d-static";
 
 // --------------- types ---------------
@@ -131,14 +130,16 @@ function normName(v: string) {
 }
 
 function buildPinCoords(locations: MapLocation[]): PinCoord[] {
-  const byName = new Map(locations.map((l) => [normName(l.name), l]));
-  return CANONICAL_STOPS.map((s) => {
-    const dbLoc = byName.get(normName(s.name));
-    // Önemli: DB'deki eski mapX/mapY değerlerini burada kullanmıyoruz.
-    // Temiz harita ve 3D açı için kalibre edilen canonical koordinatlar kullanılıyor;
-    // DB sadece locationId eşleştirmesi için okunuyor.
-    return { n: s.n, name: s.name, x: s.x, y: s.y, locId: dbLoc?.id };
-  });
+  // Only show locations that admin explicitly placed on the map (have mapX/mapY)
+  return locations
+    .filter((l) => l.mapX != null && l.mapY != null)
+    .map((l, i) => ({
+      n: i + 1,
+      name: l.name,
+      x: l.mapX as number,
+      y: l.mapY as number,
+      locId: l.id,
+    }));
 }
 
 // --------------- component ---------------

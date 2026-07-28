@@ -11,7 +11,7 @@ import { LayoutDashboard, Car, MapPin, Users, BarChart3, FileText, Settings, Pla
 
 const navItems = [
   { href: "/admin/dashboard", label: "Panel", icon: LayoutDashboard },
-  { href: "/admin/monitor", label: "Canlı Harita", icon: Monitor },
+  { href: "/admin/monitor", label: "Canlı Harita", icon: Monitor, requiresMonitor: true },
   { href: "/admin/buggies", label: "Araçlar", icon: Car },
   { href: "/admin/locations", label: "Konumlar", icon: MapPin },
   { href: "/admin/users", label: "Kullanıcılar", icon: Users },
@@ -22,12 +22,29 @@ const navItems = [
   { href: "/admin/settings/guest-design", label: "Sayfa Tasarımı", icon: Palette },
 ];
 
+function useMonitorEnabled(): boolean | null {
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setEnabled(json.data.monitor_enabled !== "false"); })
+      .catch(() => setEnabled(true));
+  }, []);
+  return enabled;
+}
+
 function SidebarContent({ user, pathname }: { user: { fullName: string }; pathname: string }) {
   const [mounted, setMounted] = useState(false);
+  const monitorEnabled = useMonitorEnabled();
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
+
+  const visibleItems = navItems.filter((item) => {
+    if (item.requiresMonitor && monitorEnabled === false) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -41,12 +58,12 @@ function SidebarContent({ user, pathname }: { user: { fullName: string }; pathna
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {!mounted
           ? <div className="px-3 py-4 text-xs text-muted-foreground">Yükleniyor…</div>
-          : navItems.map((item) => (
+          : visibleItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-              pathname.startsWith(item.href)
+              pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/admin/dashboard")
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
