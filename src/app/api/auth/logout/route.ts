@@ -3,6 +3,14 @@ import { AuthService } from "@/services/auth-service";
 import { clearSessionCookie } from "@/lib/auth";
 import type { AuthContext } from "@/types";
 
+function redirectToLogin(req: NextRequest): NextResponse {
+  const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "";
+  const proto = req.headers.get("x-forwarded-proto") || "https";
+  const res = NextResponse.redirect(new URL("/login", `${proto}://${host}`));
+  clearSessionCookie(res);
+  return res;
+}
+
 // POST /api/auth/logout — form-based logout (graceful, no auth gate)
 export async function POST(req: NextRequest) {
   const token = req.cookies.get("session_token")?.value;
@@ -16,9 +24,7 @@ export async function POST(req: NextRequest) {
       }
     } catch { /* session may already be invalid — clear cookie anyway */ }
   }
-  const res = NextResponse.redirect(new URL("/login", req.url));
-  clearSessionCookie(res);
-  return res;
+  return redirectToLogin(req);
 }
 
 // GET /api/auth/logout — direct navigation (no auth required)
@@ -34,7 +40,5 @@ export async function GET(req: NextRequest) {
       }
     } catch { /* session may already be invalid */ }
   }
-  const res = NextResponse.redirect(new URL("/login", req.url));
-  clearSessionCookie(res);
-  return res;
+  return redirectToLogin(req);
 }
