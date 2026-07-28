@@ -191,66 +191,72 @@ function GuestCallContent() {
   };
 
   return (
-    <div className="guest-ui min-h-[100dvh] flex flex-col max-w-[540px] mx-auto"
-      style={{ background: `linear-gradient(to bottom, ${config.bgStartColor}, ${config.bgEndColor})`, paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
+    <div className="min-h-[100dvh] w-full flex items-center justify-center bg-slate-100 sm:py-6">
+      {/* Mobile frame — mobile-first, QR scan target */}
+      <div
+        className="guest-ui relative flex flex-col w-full max-w-[420px] min-h-[100dvh] sm:min-h-0 sm:h-[860px] sm:max-h-[90vh] sm:rounded-[2.5rem] sm:shadow-2xl overflow-hidden"
+        style={{ background: `linear-gradient(to bottom, ${config.bgStartColor}, ${config.bgEndColor})`, paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)", paddingLeft: "max(env(safe-area-inset-left), 0.5rem)", paddingRight: "max(env(safe-area-inset-right), 0.5rem)" }}
+      >
       {/* Header */}
-      <div className="flex flex-col items-center gap-3 px-4 pt-4 pb-2" style={{ animation: "fadeInDown 0.6s ease-out" }}>
-        {/* Language selector — click-based for mobile */}
-        <div className="self-end relative">
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white border border-white/20 hover:bg-white/30 transition-colors"
-            onClick={() => setLangOpen((o) => !o)}
-            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setLangOpen(false); }}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>{LOCALES.find(l => l.code === locale)?.flag}</span>
-          </button>
-          {langOpen && (
-            <div className="absolute right-0 top-full mt-1 z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200 py-1 min-w-[160px]">
-              {LOCALES.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => { changeLocale(l.code); setLangOpen(false); }}
-                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
-                >
-                  <span className="text-base">{l.flag}</span>
-                  <span>{l.nativeLabel}</span>
-                  {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
-                </button>
-              ))}
+      <div className="flex flex-col items-center gap-3 px-2 sm:px-4 pt-4 pb-2 w-full" style={{ animation: "fadeInDown 0.6s ease-out" }}>
+        {/* Top row: clock (left) + language (right) */}
+        <div className="w-full flex items-center justify-between gap-2">
+          {config.showClock ? (
+            <div className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full text-white font-bold text-xs sm:text-sm font-mono"
+              style={{ background: config.accentColor, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+              <ClockIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="tracking-wider min-w-[70px] sm:min-w-[85px] text-center">{clock}</span>
             </div>
-          )}
+          ) : <div />}
+
+          {/* Language selector — click-based for mobile */}
+          <div className="relative">
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white border border-white/20 hover:bg-white/30 transition-colors"
+              onClick={() => setLangOpen((o) => !o)}
+              onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setLangOpen(false); }}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>{LOCALES.find(l => l.code === locale)?.flag}</span>
+            </button>
+            {langOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200 py-1 w-[140px] sm:min-w-[160px]">
+                {LOCALES.map((l) => (
+                  <button
+                    key={l.code}
+                    onClick={() => { changeLocale(l.code); setLangOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
+                  >
+                    <span className="text-base">{l.flag}</span>
+                    <span>{l.nativeLabel}</span>
+                    {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {config.showClock && (
-          <div className="self-start flex items-center gap-2 px-4 py-2 rounded-full text-white font-bold text-xs sm:text-sm font-mono"
-            style={{ background: config.accentColor, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
-            <ClockIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="tracking-wider min-w-[70px] sm:min-w-[85px] text-center">{clock}</span>
-          </div>
-        )}
-
         {config.hotelLogo && (
-          <img src={config.hotelLogo} alt="" style={{ height: config.hotelLogoSize }} className="object-contain rounded-xl mt-2" />
+          <img src={config.hotelLogo} alt="" style={{ height: config.hotelLogoSize, maxWidth: "100%" }} className="object-contain rounded-xl mt-1 max-h-[80px] sm:max-h-none" />
         )}
 
         {config.locationLogo && (
-          <div className="w-28 h-28 sm:w-40 sm:h-40 mx-auto mt-2 mb-2 relative">
+          <div className="w-24 h-24 sm:w-40 sm:h-40 mx-auto mt-2 mb-2 relative shrink-0">
             {location.logo && !imgError ? (
               <div className="w-full h-full rounded-3xl overflow-hidden">
                 <img src={location.logo} alt={location.name} className="w-full h-full object-cover" onError={() => setImgError(true)} />
               </div>
             ) : (
               <div className="w-full h-full rounded-3xl flex items-center justify-center text-white" style={{ background: config.accentColor }}>
-                <MapPin className="w-12 h-12 sm:w-16 sm:h-16" />
+                <MapPin className="w-10 h-10 sm:w-16 sm:h-16" />
               </div>
             )}
           </div>
         )}
 
         {config.locationName && (
-          <h2 className="text-lg sm:text-2xl font-bold text-center px-2" style={{ color: config.headerTextColor }}>
+          <h2 className="text-lg sm:text-2xl font-bold text-center px-1 leading-tight" style={{ color: config.headerTextColor }}>
             {location.name}
           </h2>
         )}
@@ -258,9 +264,9 @@ function GuestCallContent() {
 
       {/* Guest Information Form */}
       {hasFormFields && (
-        <div className="px-4 py-2" style={{ animation: "fadeInUp 0.6s ease-out 0.1s both" }}>
+        <div className="px-2 sm:px-4 py-2 w-full" style={{ animation: "fadeInUp 0.6s ease-out 0.1s both" }}>
           <Card className="border-slate-200">
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-3 sm:p-4 space-y-3">
               {config.fields.guestName !== "off" && (
                 <div className="space-y-1.5">
                   <Label htmlFor="guest-name" className="text-sm flex items-center gap-1.5">
@@ -307,16 +313,16 @@ function GuestCallContent() {
       )}
 
       {/* Call Button */}
-      <div className="flex-1 px-4 py-4">
+      <div className="flex-1 px-2 sm:px-4 py-3 sm:py-4 w-full">
         <div className="w-full" style={{ animation: "fadeInUp 0.6s ease-out 0.2s both" }}>
           <button
             onClick={handleButtonClick}
             disabled={submitting}
-            className={`w-full min-h-[56px] flex items-center justify-center gap-2.5 text-white font-bold text-base sm:text-lg py-4 px-6 transition-[transform,opacity,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 select-none touch-manipulation relative overflow-hidden ${config.buttonShape === "pill" ? "rounded-full" : "rounded-2xl"}`}
+            className={`w-full min-h-[56px] flex items-center justify-center gap-2 sm:gap-2.5 text-white font-bold text-base sm:text-lg py-4 px-4 sm:px-6 transition-[transform,opacity,box-shadow] duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 select-none touch-manipulation relative overflow-hidden ${config.buttonShape === "pill" ? "rounded-full" : "rounded-2xl"}`}
             style={{ background: config.buttonColor, boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}
             aria-label={config.buttonText}
           >
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5 shrink-0" />
             <span>{tr("callShuttle")}</span>
             <span ref={rippleRef} className="absolute top-1/2 left-1/2 rounded-full pointer-events-none"
               style={{ transform: "translate(-50%, -50%)", background: "rgba(255,255,255,0.3)", width: 0, height: 0 }} />
@@ -325,7 +331,7 @@ function GuestCallContent() {
       </div>
 
       {/* Footer */}
-      <footer className="shrink-0 text-center py-6" style={{ background: config.footerBgColor, animation: "fadeInUp 0.6s ease-out 0.4s both" }}>
+      <footer className="shrink-0 text-center py-5 sm:py-6 px-3" style={{ background: config.footerBgColor, animation: "fadeInUp 0.6s ease-out 0.4s both" }}>
         <p className="text-xs sm:text-sm font-semibold" style={{ color: config.footerTextColor }}>{config.footerText}</p>
       </footer>
 

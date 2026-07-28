@@ -118,6 +118,7 @@ export default function UsersPage() {
     setShowCurrentHash(false);
     setCurrentHash(null);
     setShowNewPassword(false);
+    setEditStep(0);
     setShowEdit(true);
 
     // Fetch full details including hash
@@ -279,131 +280,175 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Dialog */}
+      {/* Edit Dialog — Step by step */}
       <Dialog open={showEdit} onOpenChange={(open) => { if (!open) { setShowEdit(false); setEditing(null); } }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Kullanıcı Düzenle — {editing?.username}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-            {/* Current password hash viewer */}
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <KeyRound className="w-4 h-4" /> Mevcut Şifre (Hash)
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowCurrentHash((s) => !s)}
-                >
-                  {showCurrentHash ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
-                  {showCurrentHash ? "Gizle" : "Göster"}
-                </Button>
+
+          {/* Step indicators */}
+          <div className="flex gap-2 mb-2">
+            {[0, 1, 2].map((s) => (
+              <div key={s} className="flex-1">
+                <div className={`h-1.5 rounded-full transition-colors ${s <= editStep ? "bg-primary" : "bg-muted"}`} />
               </div>
-              {showCurrentHash && (
+            ))}
+          </div>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            {/* Step 0: Identity + role */}
+            {editStep === 0 && (
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground break-all font-mono bg-background rounded p-2 border">
-                    {currentHash || "Yükleniyor..."}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Not: Şifre tek yönlü bcrypt hash olarak saklanır. Orijinal şifre geri getirilemez.
-                  </p>
-                  <Button type="button" variant="outline" size="sm" onClick={copyHash} disabled={!currentHash}>
-                    Hash&apos;i Kopyala
+                  <Label htmlFor="edit-username">Kullanıcı Adı</Label>
+                  <Input id="edit-username" value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-fullName">Ad Soyad</Label>
+                  <Input id="edit-fullName" value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Rol</Label>
+                  <Select value={editForm.role || null} onValueChange={(value) => setEditForm({ ...editForm, role: value ?? "" })}>
+                    <SelectTrigger className="w-full" id="edit-role">
+                      <SelectValue placeholder="Rol seç" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="DRIVER">Sürücü</SelectItem>
+                      <SelectItem value="ADMIN">Yönetici</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-email">E-posta</Label>
+                  <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone">Telefon</Label>
+                  <Input id="edit-phone" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="outline" onClick={() => { setShowEdit(false); setEditing(null); }}>İptal</Button>
+                  <Button type="button" onClick={() => setEditStep(1)}>Devam Et</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 1: Password + status */}
+            {editStep === 1 && (
+              <div className="space-y-4">
+                {/* Current password hash viewer */}
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <KeyRound className="w-4 h-4" /> Mevcut Şifre (Hash)
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCurrentHash((s) => !s)}
+                    >
+                      {showCurrentHash ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                      {showCurrentHash ? "Gizle" : "Göster"}
+                    </Button>
+                  </div>
+                  {showCurrentHash && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground break-all font-mono bg-background rounded p-2 border">
+                        {currentHash || "Yükleniyor..."}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Not: Şifre tek yönlü bcrypt hash olarak saklanır. Orijinal şifre geri getirilemez.
+                      </p>
+                      <Button type="button" variant="outline" size="sm" onClick={copyHash} disabled={!currentHash}>
+                        Hash&apos;i Kopyala
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-password">Yeni Şifre (boş bırakılırsa değişmez)</Label>
+                  <div className="relative">
+                    <Input
+                      id="edit-password"
+                      type={showNewPassword ? "text" : "password"}
+                      value={editForm.password}
+                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                      placeholder="Yeni şifre (opsiyonel)"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                      onClick={() => setShowNewPassword((s) => !s)}
+                    >
+                      {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">En az 8 karakter, büyük/küçük/rakam/özel</p>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label htmlFor="edit-active" className="text-sm font-medium">Aktif</Label>
+                    <p className="text-xs text-muted-foreground">Pasif kullanıcılar giriş yapamaz</p>
+                  </div>
+                  <button
+                    type="button"
+                    id="edit-active"
+                    onClick={() => setEditForm({ ...editForm, isActive: !editForm.isActive })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.isActive ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <Label className="text-sm font-medium">Şifre Değiştirme Zorunlu</Label>
+                    <p className="text-xs text-muted-foreground">Kullanıcı bir sonraki girişte şifre değiştirmeli</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, mustChangePassword: !editForm.mustChangePassword })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.mustChangePassword ? "bg-primary" : "bg-muted"}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.mustChangePassword ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="outline" onClick={() => setEditStep(0)}>Geri</Button>
+                  <Button type="button" onClick={() => setEditStep(2)}>Devam Et</Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Summary + save */}
+            {editStep === 2 && (
+              <div className="space-y-4">
+                <div className="rounded-lg border bg-muted/30 p-3 text-sm space-y-1.5">
+                  <p className="font-medium">Özet:</p>
+                  <p className="text-muted-foreground">Kullanıcı Adı: <strong>{editForm.username}</strong></p>
+                  <p className="text-muted-foreground">Ad Soyad: <strong>{editForm.fullName}</strong></p>
+                  <p className="text-muted-foreground">Rol: <strong>{editForm.role === "ADMIN" ? "Yönetici" : "Sürücü"}</strong></p>
+                  <p className="text-muted-foreground">E-posta: <strong>{editForm.email || "—"}</strong></p>
+                  <p className="text-muted-foreground">Telefon: <strong>{editForm.phone || "—"}</strong></p>
+                  <p className="text-muted-foreground">Durum: <strong>{editForm.isActive ? "Aktif" : "Pasif"}</strong></p>
+                  <p className="text-muted-foreground">Şifre: <strong>{editForm.password ? "Yeni şifre girildi" : "Değiştirilmedi"}</strong></p>
+                  <p className="text-muted-foreground">Şifre değiştirme zorunlu: <strong>{editForm.mustChangePassword ? "Evet" : "Hayır"}</strong></p>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <Button type="button" variant="outline" onClick={() => setEditStep(1)}>Geri</Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? <Loading size={16} /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />} Güncelle
                   </Button>
                 </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-username">Kullanıcı Adı</Label>
-              <Input id="edit-username" value={editForm.username} onChange={(e) => setEditForm({ ...editForm, username: e.target.value })} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-password">Yeni Şifre (boş bırakılırsa değişmez)</Label>
-              <div className="relative">
-                <Input
-                  id="edit-password"
-                  type={showNewPassword ? "text" : "password"}
-                  value={editForm.password}
-                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-                  placeholder="Yeni şifre (opsiyonel)"
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowNewPassword((s) => !s)}
-                >
-                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-              <p className="text-xs text-muted-foreground">En az 8 karakter, büyük/küçük/rakam/özel</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">Rol</Label>
-              <Select value={editForm.role || null} onValueChange={(value) => setEditForm({ ...editForm, role: value ?? "" })}>
-                <SelectTrigger className="w-full" id="edit-role">
-                  <SelectValue placeholder="Rol seç" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="DRIVER">Sürücü</SelectItem>
-                  <SelectItem value="ADMIN">Yönetici</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-fullName">Ad Soyad</Label>
-              <Input id="edit-fullName" value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-email">E-posta</Label>
-              <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-phone">Telefon</Label>
-              <Input id="edit-phone" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label htmlFor="edit-active" className="text-sm font-medium">Aktif</Label>
-                <p className="text-xs text-muted-foreground">Pasif kullanıcılar giriş yapamaz</p>
-              </div>
-              <button
-                type="button"
-                id="edit-active"
-                onClick={() => setEditForm({ ...editForm, isActive: !editForm.isActive })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.isActive ? "bg-primary" : "bg-muted"}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.isActive ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label className="text-sm font-medium">Şifre Değiştirme Zorunlu</Label>
-                <p className="text-xs text-muted-foreground">Kullanıcı bir sonraki girişte şifre değiştirmeli</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditForm({ ...editForm, mustChangePassword: !editForm.mustChangePassword })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${editForm.mustChangePassword ? "bg-primary" : "bg-muted"}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${editForm.mustChangePassword ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
-            </div>
-
-            <div className="flex gap-2 justify-end pt-2">
-              <Button type="button" variant="outline" onClick={() => { setShowEdit(false); setEditing(null); }}>İptal</Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? <Loading size={16} /> : <RotateCcw className="w-3.5 h-3.5 mr-1" />} Güncelle
-              </Button>
-            </div>
+            )}
           </form>
         </DialogContent>
       </Dialog>
