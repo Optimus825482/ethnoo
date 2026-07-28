@@ -328,13 +328,44 @@ export default function LocationsPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Konumlar</h1>
-        <Button
-          onClick={() => openWizard()}
-          disabled={!mapUrl}
-          title={!mapUrl ? "Önce harita yükleyin" : undefined}
-        >
-          <Plus className="w-4 h-4 mr-1" /> Konum Ekle
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={async () => {
+              const withQr = locations.filter((l) => l.qrCodeData);
+              if (withQr.length === 0) {
+                toast.error("İndirilecek QR kodu yok");
+                return;
+              }
+              toast.success(`${withQr.length} QR kodu indiriliyor...`);
+              const JSZip = (await import("jszip")).default;
+              const zip = new JSZip();
+              for (const loc of withQr) {
+                const guestUrl = `${window.location.origin}/guest/call?location=${loc.id}`;
+                const dataUrl = await QRCode.toDataURL(guestUrl, { width: 512, margin: 2 });
+                const base64 = dataUrl.split(",")[1];
+                const filename = loc.name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+                zip.file(`qr-${filename}.png`, base64, { base64: true });
+              }
+              const blob = await zip.generateAsync({ type: "blob" });
+              const link = document.createElement("a");
+              link.href = URL.createObjectURL(blob);
+              link.download = `qr-kodlari-${new Date().toISOString().slice(0, 10)}.zip`;
+              link.click();
+              URL.revokeObjectURL(link.href);
+            }}
+            disabled={locations.filter((l) => l.qrCodeData).length === 0}
+          >
+            <Download className="w-4 h-4 mr-1" /> Tüm QR&apos;ları İndir
+          </Button>
+          <Button
+            onClick={() => openWizard()}
+            disabled={!mapUrl}
+            title={!mapUrl ? "Önce harita yükleyin" : undefined}
+          >
+            <Plus className="w-4 h-4 mr-1" /> Konum Ekle
+          </Button>
+        </div>
       </div>
 
       {/* Locations table */}

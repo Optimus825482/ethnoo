@@ -77,6 +77,20 @@ export const LocationService = {
       newValues: location as unknown as Record<string, unknown>,
     });
 
+    // Auto-generate QR code
+    try {
+      const qrData = JSON.stringify({
+        type: "shuttlecall",
+        hotelId,
+        locationId: location.id,
+        name: location.name,
+      });
+      await prisma.location.update({
+        where: { id: location.id },
+        data: { qrCodeData: qrData },
+      });
+    } catch { /* QR non-critical */ }
+
     return location;
   },
 
