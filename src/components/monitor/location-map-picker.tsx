@@ -20,8 +20,8 @@ export function LocationMapPicker({ value, onChange }: {
 
   return (
     <div className="space-y-1">
-      <div ref={ref} onClick={handleClick} className="relative cursor-crosshair rounded-lg overflow-hidden border border-border">
-        <img src={MAP_TEXTURE_URL} alt="Harita" className="w-full block" />
+      <div ref={ref} onClick={handleClick} className="relative cursor-crosshair rounded-lg overflow-hidden border border-border inline-block">
+        <img src={MAP_TEXTURE_URL} alt="Harita" className="max-w-full max-h-[260px] block" />
         {value && (
           <div
             className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 pointer-events-none"

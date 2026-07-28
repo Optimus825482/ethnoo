@@ -170,11 +170,22 @@ export default function LocationsPage() {
     }
     setShowQR(loc);
     try {
-      const guestUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3016"}/guest/call?location=${loc.id}`;
+      const guestUrl = `${window.location.origin}/guest/call?location=${loc.id}`;
       const dataUrl = await QRCode.toDataURL(guestUrl, { width: 256, margin: 2 });
       setQrImage(dataUrl);
     } catch {
       toast.error("QR oluşturulamadı");
+    }
+  }
+
+  async function deleteQR(loc: Location) {
+    const res = await fetch(`/api/locations/${loc.id}/qr`, { method: "DELETE" });
+    const json = await res.json();
+    if (json.success) {
+      toast.success("QR kod silindi");
+      load();
+    } else {
+      toast.error(json.error?.message || "Silme başarısız");
     }
   }
 
@@ -246,13 +257,22 @@ export default function LocationsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {l.qrCodeData ? (
-                        <Button size="sm" variant="ghost" className="px-2" onClick={() => viewQR(l)} title="QR Kodu Görüntüle">
-                          <QrCode className="w-4 h-4 text-emerald-600" />
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {l.qrCodeData ? (
+                          <>
+                            <Button size="sm" variant="ghost" className="px-2" onClick={() => viewQR(l)} title="QR Kodu Görüntüle">
+                              <QrCode className="w-4 h-4 text-emerald-600" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="px-2" onClick={() => deleteQR(l)} title="QR Kodu Sil">
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button size="sm" variant="ghost" onClick={() => generateQR(l)}>
+                            <QrCode className="w-3 h-3 mr-1" /> Oluştur
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -264,9 +284,6 @@ export default function LocationsPage() {
                           setMapPoint(l.mapX != null && l.mapY != null ? { x: l.mapX, y: l.mapY } : null);
                           setShowDialog(true);
                         }}>Düzenle</Button>
-                        <Button size="sm" variant="ghost" onClick={() => generateQR(l)}>
-                          <QrCode className="w-3 h-3 mr-1" /> QR Oluştur
-                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

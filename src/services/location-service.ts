@@ -166,4 +166,20 @@ export const LocationService = {
 
     return updated;
   },
+
+  async clearQR(hotelId: number, id: number, userId?: number) {
+    await this.getById(hotelId, id);
+    const updated = await prisma.location.update({
+      where: { id },
+      data: { qrCodeData: null },
+    });
+    await logAudit({
+      hotelId,
+      userId,
+      action: "DELETE_QR",
+      entityType: "Location",
+      entityId: id,
+    });
+    return updated;
+  },
 };
