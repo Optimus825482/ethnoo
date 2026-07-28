@@ -18,9 +18,12 @@ export const createUserSchema = z.object({
 export type CreateUserInput = z.infer<typeof createUserSchema>
 
 export const updateUserSchema = z.object({
+  username: z.string().min(1, 'Username required').max(50).optional(),
+  password: passwordSchema.optional(),
+  role: z.enum(['ADMIN', 'DRIVER']).optional(),
   fullName: z.string().min(1).max(255).optional(),
-  email: z.email().max(255).optional(),
-  phone: z.string().max(50).optional(),
+  email: z.email().max(255).nullable().optional(),
+  phone: z.string().max(50).nullable().optional(),
   isActive: z.boolean().optional(),
   mustChangePassword: z.boolean().optional(),
 })

@@ -165,12 +165,14 @@ export function MonitorMap3D({
   calls,
   selection,
   onSelect,
+  mapUrl,
 }: {
   locations: MapLocation[];
   buggies: MapBuggy[];
   calls: MapCall[];
   selection: MapSelection;
   onSelect?: (sel: MapSelection) => void;
+  mapUrl?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ctxRef = useRef<SceneCtx | null>(null);
@@ -249,7 +251,7 @@ export function MonitorMap3D({
     ctxRef.current = ctx;
 
     // static scene
-    buildStaticScene((root) => { if (!ctx.destroyed) { ctx.staticRoot = root; scene.add(root); } });
+    buildStaticScene((root) => { if (!ctx.destroyed) { ctx.staticRoot = root; scene.add(root); } }, mapUrl);
 
     // --- orbit controls (reference-style) ---
     let dragging = false, panMode = false, lx = 0, ly = 0;

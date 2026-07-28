@@ -118,9 +118,10 @@ export function createCart(colorOrIndex: number = 0): THREE.Group {
   return g;
 }
 
-export function buildStaticScene(onReady: (root: THREE.Group) => void) {
+export function buildStaticScene(onReady: (root: THREE.Group) => void, mapUrl?: string | null) {
   const loader = new THREE.TextureLoader();
-  loader.load(MAP_TEXTURE_URL, (tex) => {
+  const src = mapUrl || MAP_TEXTURE_URL;
+  loader.load(src, (tex) => {
     setSRGB(tex);
     tex.anisotropy = 8;
 

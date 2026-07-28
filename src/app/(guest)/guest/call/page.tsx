@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Loading } from "@/components/ui/loading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,8 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } fr
 import { GuestPageConfig, FieldMode, CustomField, defaultGuestPageConfig } from "@/lib/guest-page-config";
 import { __, LOCALES, getInitialLocale, setLocale, type SupportedLocale, type TranslationKeys } from "@/lib/i18n";
 
+export const dynamic = "force-dynamic";
+
 interface Location {
   id: number;
   name: string;
@@ -23,7 +26,7 @@ interface Location {
   description?: string | null;
 }
 
-export default function GuestCallPage() {
+function GuestCallContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const locationId = searchParams.get("location");
@@ -35,6 +38,7 @@ export default function GuestCallPage() {
   const [clock, setClock] = useState("--:--:--");
   const [imgError, setImgError] = useState(false);
   const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
+  const [langOpen, setLangOpen] = useState(false);
   const rippleRef = useRef<HTMLSpanElement>(null);
 
   function tr(key: TranslationKeys): string { return __(locale, key); }
@@ -44,17 +48,14 @@ export default function GuestCallPage() {
     setLocale(l);
   }
 
-  // Config from admin designer
   const [config, setConfig] = useState<GuestPageConfig>(defaultGuestPageConfig);
 
-  // Guest form state
   const [guestName, setGuestName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
-  // Clock
   useEffect(() => {
     const tick = () => {
       try {
@@ -71,7 +72,6 @@ export default function GuestCallPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Load location
   useEffect(() => {
     if (!locationId) { toast.error(tr("locationNotFound")); return; }
     fetch(`/api/locations/${locationId}`)
@@ -81,7 +81,6 @@ export default function GuestCallPage() {
       .finally(() => setLoading(false));
   }, [locationId]);
 
-  // Load config from public settings endpoint
   useEffect(() => {
     if (!locationId) return;
     fetch(`/api/locations/${locationId}/settings`)
@@ -90,7 +89,6 @@ export default function GuestCallPage() {
         if (json.success && json.data.pageConfig) {
           setConfig({ ...defaultGuestPageConfig, ...json.data.pageConfig, fields: { ...defaultGuestPageConfig.fields, ...(json.data.pageConfig.fields || {}) } });
         } else if (json.success) {
-          // Fallback: legacy flat settings
           setConfig(prev => ({
             ...prev,
             fields: {
@@ -104,7 +102,6 @@ export default function GuestCallPage() {
       .catch(() => {});
   }, [locationId]);
 
-  // Validation
   function validateFields(): string | null {
     if (config.fields.guestName === "required" && !guestName.trim()) return "Lütfen adınızı girin";
     if (config.fields.roomNumber === "required" && !roomNumber.trim()) return "Lütfen oda numaranızı girin";
@@ -135,7 +132,6 @@ export default function GuestCallPage() {
       if (guestName.trim()) body.guestName = guestName.trim();
       if (roomNumber.trim()) body.roomNumber = roomNumber.trim();
       if (phone.trim()) body.phone = phone.trim();
-      // Include custom field values in notes
       if (Object.keys(customValues).length > 0) {
         const customParts = Object.keys(customValues)
           .filter((k) => customValues[k].trim())
@@ -157,7 +153,6 @@ export default function GuestCallPage() {
       setShowLoading(false);
       if (json.success && json.data?.id && json.data?.guestCapability) {
         guestCapabilityStorage.set(json.data.id, json.data.guestCapability);
-        // Store config for status page
         try { sessionStorage.setItem("guest-status-config", JSON.stringify(config)); } catch {}
         router.push(`/guest/status/${json.data.id}`);
       } else if (json.success && json.data?.request?.id && json.data?.guestCapability) {
@@ -188,22 +183,11 @@ export default function GuestCallPage() {
     </div>
   );
 
-  const ICON_MAP: Record<string, React.ReactNode> = {
-    guestName: <User className="w-3.5 h-3.5" />,
-    roomNumber: <DoorOpen className="w-3.5 h-3.5" />,
-    phone: <Phone className="w-3.5 h-3.5" />,
-  };
-
   const FIELD_LABELS: Record<string, TranslationKeys> = {
-    guestName: "yourName",
-    roomNumber: "roomNumber",
-    phone: "phone",
+    guestName: "yourName", roomNumber: "roomNumber", phone: "phone",
   };
-
   const FIELD_PLACEHOLDERS: Record<string, TranslationKeys> = {
-    guestName: "enterName",
-    roomNumber: "enterRoom",
-    phone: "enterPhone",
+    guestName: "enterName", roomNumber: "enterRoom", phone: "enterPhone",
   };
 
   return (
@@ -212,25 +196,31 @@ export default function GuestCallPage() {
     >
       {/* Header */}
       <div className="flex flex-col items-center gap-3 px-4 pt-4 pb-2" style={{ animation: "fadeInDown 0.6s ease-out" }}>
-        {/* Language selector — top right */}
-        <div className="self-end relative group">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white border border-white/20 hover:bg-white/30 transition-colors">
+        {/* Language selector — click-based for mobile */}
+        <div className="self-end relative">
+          <button
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-white/20 backdrop-blur-sm text-white border border-white/20 hover:bg-white/30 transition-colors"
+            onClick={() => setLangOpen((o) => !o)}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setLangOpen(false); }}
+          >
             <Globe className="w-3.5 h-3.5" />
             <span>{LOCALES.find(l => l.code === locale)?.flag}</span>
           </button>
-          <div className="absolute right-0 top-full mt-1 hidden group-hover:block hover:block z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200 py-1 min-w-[160px]">
-            {LOCALES.map((l) => (
-              <button
-                key={l.code}
-                onClick={() => changeLocale(l.code)}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
-              >
-                <span className="text-base">{l.flag}</span>
-                <span>{l.nativeLabel}</span>
-                {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
-              </button>
-            ))}
-          </div>
+          {langOpen && (
+            <div className="absolute right-0 top-full mt-1 z-50 bg-white/95 backdrop-blur-md rounded-xl shadow-xl border border-slate-200 py-1 min-w-[160px]">
+              {LOCALES.map((l) => (
+                <button
+                  key={l.code}
+                  onClick={() => { changeLocale(l.code); setLangOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-slate-100 transition-colors ${locale === l.code ? "font-bold bg-slate-50" : ""}`}
+                >
+                  <span className="text-base">{l.flag}</span>
+                  <span>{l.nativeLabel}</span>
+                  {locale === l.code && <Check className="w-3.5 h-3.5 ml-auto text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {config.showClock && (
@@ -341,22 +331,22 @@ export default function GuestCallPage() {
 
       {/* Confirm Dialog */}
       <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent showCloseButton={false} className="max-w-[400px] rounded-3xl bg-white p-6 sm:p-8" style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
+        <DialogContent showCloseButton={false} className="max-w-[92vw] sm:max-w-[400px] rounded-3xl bg-white p-4 sm:p-8 mx-2" style={{ boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
           <div className="text-center">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-5 rounded-full flex items-center justify-center" style={{ background: config.buttonColor, boxShadow: "0 12px 24px rgba(0,0,0,0.2)" }}>
-              <HelpCircle className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
+            <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-5 rounded-full flex items-center justify-center" style={{ background: config.buttonColor, boxShadow: "0 12px 24px rgba(0,0,0,0.2)" }}>
+              <HelpCircle className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </div>
-            <DialogTitle className="text-lg sm:text-2xl font-bold text-gray-900 mb-2 sm:mb-3">{tr("confirmTitle")}</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 mb-4 sm:mb-6">{tr("confirmDescription")}</DialogDescription>
-            <div className="rounded-2xl p-4 sm:p-5 mb-4 sm:mb-6 text-left" style={{ background: "rgba(0,0,0,0.03)", border: "2px solid rgba(0,0,0,0.08)" }}>
-              <div className="flex items-center gap-3 text-sm text-slate-700"><MapPin className="w-5 h-5 shrink-0" /><span><strong>{tr("location")}:</strong> {location.name}</span></div>
-              {guestName && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><User className="w-5 h-5 shrink-0" /><span><strong>{tr("name")}:</strong> {guestName}</span></div>}
-              {roomNumber && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><DoorOpen className="w-5 h-5 shrink-0" /><span><strong>{tr("room")}:</strong> {roomNumber}</span></div>}
-              {phone && <div className="flex items-center gap-3 text-sm text-slate-700 mt-2"><Phone className="w-5 h-5 shrink-0" /><span><strong>{tr("phoneLabel")}:</strong> {phone}</span></div>}
+            <DialogTitle className="text-base sm:text-2xl font-bold text-gray-900 mb-1.5 sm:mb-3">{tr("confirmTitle")}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-6">{tr("confirmDescription")}</DialogDescription>
+            <div className="rounded-2xl p-3 sm:p-5 mb-3 sm:mb-6 text-left" style={{ background: "rgba(0,0,0,0.03)", border: "2px solid rgba(0,0,0,0.08)" }}>
+              <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-700"><MapPin className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /><span><strong>{tr("location")}:</strong> {location.name}</span></div>
+              {guestName && <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-700 mt-1.5 sm:mt-2"><User className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /><span><strong>{tr("name")}:</strong> {guestName}</span></div>}
+              {roomNumber && <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-700 mt-1.5 sm:mt-2"><DoorOpen className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /><span><strong>{tr("room")}:</strong> {roomNumber}</span></div>}
+              {phone && <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-700 mt-1.5 sm:mt-2"><Phone className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" /><span><strong>{tr("phoneLabel")}:</strong> {phone}</span></div>}
             </div>
-            <div className="flex gap-3">
-              <DialogClose className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold transition-[transform,opacity] duration-200 hover:bg-gray-200 flex items-center justify-center gap-2" style={{ background: "#f3f4f6", color: "#6b7280" }}><X className="w-4 h-4" /><span>{tr("cancel")}</span></DialogClose>
-              <button onClick={submitRequest} className="flex-1 py-3.5 sm:py-4 rounded-2xl text-sm sm:text-base font-bold text-white transition-[transform,opacity] duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-2" style={{ background: config.buttonColor, boxShadow: "0 6px 20px rgba(0,0,0,0.2)" }}><Check className="w-4 h-4" /><span>{tr("yesCall")}</span></button>
+            <div className="flex gap-2 sm:gap-3">
+              <DialogClose className="flex-1 py-3 sm:py-4 rounded-2xl text-xs sm:text-base font-bold transition-[transform,opacity] duration-200 hover:bg-gray-200 flex items-center justify-center gap-1.5 sm:gap-2" style={{ background: "#f3f4f6", color: "#6b7280" }}><X className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>{tr("cancel")}</span></DialogClose>
+              <button onClick={submitRequest} className="flex-1 py-3 sm:py-4 rounded-2xl text-xs sm:text-base font-bold text-white transition-[transform,opacity] duration-200 hover:-translate-y-0.5 flex items-center justify-center gap-1.5 sm:gap-2" style={{ background: config.buttonColor, boxShadow: "0 6px 20px rgba(0,0,0,0.2)" }}><Check className="w-3.5 h-3.5 sm:w-4 sm:h-4" /><span>{tr("yesCall")}</span></button>
             </div>
           </div>
         </DialogContent>
@@ -372,5 +362,13 @@ export default function GuestCallPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function GuestCallPage() {
+  return (
+    <Suspense fallback={<Loading fullPage />}>
+      <GuestCallContent />
+    </Suspense>
   );
 }

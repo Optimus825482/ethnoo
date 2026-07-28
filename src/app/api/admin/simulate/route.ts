@@ -17,7 +17,8 @@ export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
     select: { value: true },
   });
 
-  const isDemo = demoMode?.value === "true";
+  // Default to true when not set (matches settings API default)
+  const isDemo = demoMode?.value !== "false";
 
   const locations = isDemo
     ? await prisma.location.findMany({

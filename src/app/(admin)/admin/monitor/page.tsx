@@ -29,6 +29,7 @@ function fmtWait(requestedAt: string, now: number) {
 export default function MonitorPage() {
   const router = useRouter();
   const [monitorEnabled, setMonitorEnabled] = useState<boolean | null>(null);
+  const [mapUrl, setMapUrl] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -47,6 +48,8 @@ export default function MonitorPage() {
       .then((json) => {
         if (json.success) {
           setMonitorEnabled(json.data.monitor_enabled !== "false");
+          const mUrl = json.data.monitor_map_url;
+          setMapUrl(mUrl && mUrl !== "" ? mUrl : null);
         }
       })
       .catch(() => setMonitorEnabled(true));
@@ -128,6 +131,7 @@ export default function MonitorPage() {
               calls={data.requests}
               selection={selection}
               onSelect={setSelection}
+              mapUrl={mapUrl}
             />
           </CardContent>
         </Card>
