@@ -22,7 +22,9 @@ class EventBus {
   publish(channel: string, data: string): void {
     const handlers = this.channels.get(channel);
     if (handlers) {
-      handlers.forEach((h) => h(data));
+      for (const h of handlers) {
+        try { h(data); } catch { /* isolate: one bad handler must not break others */ }
+      }
     }
   }
 }

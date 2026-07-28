@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { AdminNav } from "@/components/admin-nav";
+import { Loading } from "@/components/ui/loading";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -8,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!sessionToken) redirect("/login");
 
-  const res = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3016"}/api/auth/me`, {
+  const res = await fetch(`${process.env.NEXTAUTH_URL!}/api/auth/me`, {
     headers: { Cookie: `session_token=${sessionToken}` },
     cache: "no-store",
   });
@@ -21,7 +23,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="flex min-h-[100dvh]">
       <AdminNav user={{ fullName: json.data.user.fullName }} />
       <main className="flex-1 overflow-auto p-4 md:p-6 pt-14 md:pt-6 max-w-full">
-        {children}
+        <Suspense fallback={<Loading fullPage />}>{children}</Suspense>
       </main>
     </div>
   );

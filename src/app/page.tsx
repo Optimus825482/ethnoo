@@ -7,7 +7,7 @@ export default async function Home() {
 
   if (token) {
     try {
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3016";
+      const baseUrl = process.env.NEXTAUTH_URL!;
       const res = await fetch(`${baseUrl}/api/auth/me`, {
         headers: { Cookie: `session_token=${token}` },
         cache: "no-store",

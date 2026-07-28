@@ -55,6 +55,9 @@ export const AuthService = {
         mustChangePassword: user.mustChangePassword,
         hotelName: user.hotel.name,
       },
+      needsLocations: user.role === "ADMIN"
+        ? (await prisma.location.count({ where: { hotelId: user.hotelId, isActive: true } })) === 0
+        : false,
     };
   },
 

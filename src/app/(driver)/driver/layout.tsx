@@ -10,7 +10,7 @@ export default async function DriverLayout({ children }: { children: React.React
 
   if (!sessionToken) redirect("/login");
 
-  const res = await fetch(`${process.env.NEXTAUTH_URL || "http://localhost:3016"}/api/auth/me`, {
+  const res = await fetch(`${process.env.NEXTAUTH_URL!}/api/auth/me`, {
     headers: { Cookie: `session_token=${sessionToken}` },
     cache: "no-store",
   });

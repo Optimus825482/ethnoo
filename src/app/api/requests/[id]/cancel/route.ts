@@ -1,9 +1,14 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { RequestService } from "@/services/request-service";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { withRateLimit, toRouteHandler } from "@/lib/middleware";
 import { prisma } from "@/lib/db";
 import { hashToken } from "@/lib/utils";
+
+const cancelBodySchema = z.object({
+  reason: z.string().optional(),
+});
 
 // POST /api/requests/[id]/cancel
 // Authenticated (driver/admin) → service.cancel with hotelId/userId
@@ -38,12 +43,20 @@ export const POST = toRouteHandler(
           return apiError("Session expired or invalid", 401, "SESSION_EXPIRED");
         }
 
+        let reason: string | undefined;
+        try {
+          const body = await req.json();
+          const parsed = cancelBodySchema.safeParse(body);
+          if (parsed.success) reason = parsed.data.reason;
+        } catch { /* body optional */ }
+
         const cancelledBy = session.user.role === "ADMIN" ? "ADMIN" : "DRIVER";
         const request = await RequestService.cancel(
           session.user.hotelId,
           id,
           cancelledBy,
           session.user.id,
+          reason,
         );
         return apiSuccess(request);
       } catch (err) {

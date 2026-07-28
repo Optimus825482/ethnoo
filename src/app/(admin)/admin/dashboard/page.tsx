@@ -148,7 +148,7 @@ export default function AdminDashboard() {
 
   // SSE for real-time notifications
   useEffect(() => {
-    const es = new EventSource("/api/sse/driver");
+    const es = new EventSource("/api/sse/admin");
     es.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);

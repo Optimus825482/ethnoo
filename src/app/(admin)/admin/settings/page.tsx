@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
-import { Settings, AlertTriangle, CheckCircle, User, Phone, DoorOpen, Eye, X } from "lucide-react";
+import { Settings, AlertTriangle, CheckCircle, User, Phone, DoorOpen, Eye, X, Trash2, Map } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type FieldMode = "required" | "optional" | "off";
 
@@ -17,6 +19,7 @@ interface SettingsState {
   guest_fields_name: FieldMode;
   guest_fields_room: FieldMode;
   guest_fields_phone: FieldMode;
+  monitor_enabled: "true" | "false";
 }
 
 const defaults: SettingsState = {
@@ -24,6 +27,7 @@ const defaults: SettingsState = {
   guest_fields_name: "optional",
   guest_fields_room: "optional",
   guest_fields_phone: "optional",
+  monitor_enabled: "true",
 };
 
 // --- Preview component ---
@@ -39,7 +43,7 @@ function GuestCallPreview({ settings }: { settings: SettingsState }) {
   if (visible.length === 0) {
     return (
       <div className="text-center py-6 text-sm text-muted-foreground">
-        Hiçbir bilgi alanı aktif değil.<br />Sadece "Shuttle Çağır" butonu gösterilir.
+        Hiçbir bilgi alanı aktif değil.<br />Sadece &quot;Shuttle Çağır&quot; butonu gösterilir.
       </div>
     );
   }
@@ -68,10 +72,13 @@ function GuestCallPreview({ settings }: { settings: SettingsState }) {
 }
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<SettingsState>(defaults);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState("");
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/settings")
@@ -83,6 +90,7 @@ export default function SettingsPage() {
             guest_fields_name: (json.data.guest_fields_name as FieldMode) || "optional",
             guest_fields_room: (json.data.guest_fields_room as FieldMode) || "optional",
             guest_fields_phone: (json.data.guest_fields_phone as FieldMode) || "optional",
+            monitor_enabled: (json.data.monitor_enabled as "true" | "false") || "true",
           });
         }
       })
@@ -159,6 +167,39 @@ export default function SettingsPage() {
               id="demo-mode"
               checked={settings.demo_mode === "true"}
               onCheckedChange={(v) => setField("demo_mode", v ? "true" : "false")}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Canlı Harita İzleme */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Map className="w-5 h-5" />
+            Canlı Harita İzleme
+          </CardTitle>
+          <CardDescription>
+            Canlı harita izleme özelliğini açıp kapatın. Harita açıkken admin panelinden
+            araçların ve çağrıların anlık konumlarını görebilirsiniz.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="monitor-enabled" className="text-base">
+                Canlı Harita
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {settings.monitor_enabled === "true"
+                  ? "Harita aktif — araç ve çağrı konumları canlı izlenebilir"
+                  : "Harita kapalı — monitor sayfası devre dışı"}
+              </p>
+            </div>
+            <Switch
+              id="monitor-enabled"
+              checked={settings.monitor_enabled === "true"}
+              onCheckedChange={(v) => setField("monitor_enabled", v ? "true" : "false")}
             />
           </div>
         </CardContent>
@@ -267,6 +308,63 @@ export default function SettingsPage() {
                 <GuestCallPreview settings={settings} />
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Sistem Sıfırlama */}
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="w-5 h-5" />
+            Sistem Sıfırlama
+          </CardTitle>
+          <CardDescription>
+            Tüm verileri (oteller, kullanıcılar, araçlar, konumlar, çağrı kayıtları) kalıcı
+            olarak siler. Sistem kurulum sayfasına döner. Bu işlem geri alınamaz!
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+            <p className="text-sm text-destructive font-medium">
+              Devam etmek için aşağıya &quot;SIFIRLA&quot; yazın ve butona basın.
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Input
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+              placeholder="SIFIRLA"
+              className="max-w-[200px]"
+            />
+            <Button
+              variant="destructive"
+              disabled={resetConfirm !== "SIFIRLA" || resetting}
+              onClick={async () => {
+                setResetting(true);
+                try {
+                  const res = await fetch("/api/admin/reset", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ confirm: "SIFIRLA" }),
+                  });
+                  const json = await res.json();
+                  if (json.success) {
+                    toast.success(json.data.message);
+                    router.push("/setup");
+                  } else {
+                    toast.error(json.error?.message || "Sıfırlama başarısız");
+                  }
+                } catch {
+                  toast.error("Ağ hatası");
+                } finally {
+                  setResetting(false);
+                }
+              }}
+            >
+              {resetting ? <Loading size={16} /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Sistemi Sıfırla
+            </Button>
           </div>
         </CardContent>
       </Card>

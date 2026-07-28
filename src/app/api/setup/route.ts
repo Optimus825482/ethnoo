@@ -8,19 +8,20 @@ import { passwordSchema } from "@/schemas/password";
 import { getEnv } from "@/env";
 import { withRateLimit, toRouteHandler } from "@/lib/middleware";
 
-// GET — authenticated setup state check
+// GET — public setup state check (secret optional, for login page redirect)
 export async function GET(req: NextRequest) {
-  if (!secretsMatch(req.headers.get("x-setup-secret") ?? "", getEnv().SETUP_SECRET)) {
-    return apiError("Invalid setup credentials", 401, "INVALID_SETUP_SECRET");
-  }
-
   const hotelCount = await prisma.hotel.count();
   const userCount = await prisma.user.count();
-  return apiSuccess({
-    setupRequired: hotelCount === 0 || userCount === 0,
-    hotelCount,
-    userCount,
-  });
+  const setupRequired = hotelCount === 0 || userCount === 0;
+  const isAuthenticated = secretsMatch(req.headers.get("x-setup-secret") ?? "", getEnv().SETUP_SECRET);
+
+  if (!isAuthenticated) {
+    // Public: only expose whether setup is needed
+    return apiSuccess({ setupRequired });
+  }
+
+  // Authenticated: full info
+  return apiSuccess({ setupRequired, hotelCount, userCount });
 }
 
 const setupSchema = z.object({
@@ -33,7 +34,13 @@ const setupSchema = z.object({
   adminEmail: z.string().email().optional(),
   setupSecret: z.string().min(1),
   hotelLogo: z.string().optional(),
-});
+  buggyCount: z.number().int().min(0).max(50).default(0),
+  createDrivers: z.boolean().default(false),
+  driverPassword: passwordSchema.optional(),
+}).refine(
+  (data) => !data.createDrivers || (data.createDrivers && data.driverPassword),
+  { message: "Driver password is required when creating drivers", path: ["driverPassword"] },
+);
 
 function secretsMatch(provided: string, expected: string) {
   const providedHash = createHash("sha256").update(provided).digest();
@@ -91,13 +98,60 @@ async function handleSetup(req: NextRequest) {
         },
       });
 
-      return { hotel, admin };
+      // Create buggy fleet
+      const buggies: Array<{ id: number; code: string }> = [];
+      if (data.buggyCount > 0) {
+        const driverPasswordHash = data.createDrivers
+          ? await hashPassword(data.driverPassword!)
+          : null;
+
+        for (let i = 0; i < data.buggyCount; i++) {
+          const code = `BG-${String(i + 1).padStart(3, "0")}`;
+          const buggy = await tx.buggy.create({
+            data: {
+              hotelId: hotel.id,
+              code,
+              status: "AVAILABLE",
+              isActive: true,
+            },
+          });
+          buggies.push({ id: buggy.id, code });
+
+          if (data.createDrivers && driverPasswordHash) {
+            const driverUsername = `buggy${i + 1}`;
+            const driver = await tx.user.create({
+              data: {
+                hotelId: hotel.id,
+                username: driverUsername,
+                passwordHash: driverPasswordHash,
+                role: "DRIVER",
+                fullName: `${code} Şoförü`,
+                isActive: true,
+                mustChangePassword: false,
+                driverStatus: "ON_DUTY",
+              },
+            });
+
+            await tx.buggyDriver.create({
+              data: {
+                buggyId: buggy.id,
+                driverId: driver.id,
+                isPrimary: true,
+                assignedAt: new Date(),
+              },
+            });
+          }
+        }
+      }
+
+      return { hotel, admin, buggyCount: buggies.length };
     }, { isolationLevel: "Serializable" });
 
     return apiSuccess({
       hotel: { id: result.hotel.id, name: result.hotel.name, code: result.hotel.code },
       admin: { id: result.admin.id, username: result.admin.username },
-      message: "Setup completed. You can now login.",
+      buggyCount: result.buggyCount,
+      message: "Kurulum tamamlandı. Giriş yapabilirsiniz.",
     }, 201);
   } catch (err) {
     if (

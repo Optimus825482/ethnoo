@@ -16,6 +16,7 @@ async function handleLogin(req: NextRequest, data: { username: string; password:
     const res = apiSuccess({
       user: result.user,
       mustChangePassword: result.user.mustChangePassword,
+      needsLocations: result.needsLocations,
     });
     setSessionCookie(res, result.token);
     return res;

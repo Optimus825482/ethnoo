@@ -11,6 +11,7 @@ const updateSettingsSchema = z.object({
   guest_fields_room: z.enum(["required", "optional", "off"]).optional(),
   guest_fields_phone: z.enum(["required", "optional", "off"]).optional(),
   guest_page_config: z.string().optional(),
+  monitor_enabled: z.enum(["true", "false"]).optional(),
 });
 
 export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
@@ -29,6 +30,7 @@ export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   if (!("guest_fields_name" in map)) map.guest_fields_name = "optional";
   if (!("guest_fields_room" in map)) map.guest_fields_room = "optional";
   if (!("guest_fields_phone" in map)) map.guest_fields_phone = "optional";
+  if (!("monitor_enabled" in map)) map.monitor_enabled = "true";
 
   return apiSuccess(map);
 }, { role: "ADMIN" }));
@@ -50,6 +52,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   if (data.guest_fields_room !== undefined) fields.push({ key: "guest_fields_room", value: data.guest_fields_room });
   if (data.guest_fields_phone !== undefined) fields.push({ key: "guest_fields_phone", value: data.guest_fields_phone });
   if (data.guest_page_config !== undefined) fields.push({ key: "guest_page_config", value: data.guest_page_config });
+  if (data.monitor_enabled !== undefined) fields.push({ key: "monitor_enabled", value: data.monitor_enabled });
 
   for (const f of fields) {
     await prisma.systemSetting.upsert({
@@ -86,6 +89,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     map[s.key] = s.value;
   }
   if (!("demo_mode" in map)) map.demo_mode = "true";
+  if (!("monitor_enabled" in map)) map.monitor_enabled = "true";
 
   return apiSuccess(map);
 }, { role: "ADMIN" }));

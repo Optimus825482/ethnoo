@@ -12,7 +12,7 @@ export async function proxy(req: NextRequest) {
   // Setup check — redirect root and login to /setup if needed
   if (pathname === "/" || pathname === "/login") {
     try {
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3016";
+      const baseUrl = process.env.NEXTAUTH_URL!;
       const sRes = await fetch(`${baseUrl}/api/setup`, { cache: "no-store" });
       const sJson = await sRes.json();
       if (sJson.success && sJson.data.setupRequired) {

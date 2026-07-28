@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Loading } from "@/components/ui/loading";
 import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
-import { Plus, MapPin, QrCode, Upload, Trash2, Image as ImageIcon, Download } from "lucide-react";
+import { Plus, MapPin, QrCode, Upload, Trash2, Image as ImageIcon, Download, AlertTriangle, RefreshCw } from "lucide-react";
 import { LocationMapPicker } from "@/components/monitor/location-map-picker";
 import QRCode from "qrcode";
 
@@ -34,6 +35,8 @@ interface Location {
 }
 
 export default function LocationsPage() {
+  const searchParams = useSearchParams();
+  const isNew = searchParams.get("new") === "true";
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -201,6 +204,18 @@ export default function LocationsPage() {
 
   return (
     <div className="space-y-6">
+      {isNew && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-amber-600">En az bir konum oluşturmalısınız</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Shuttle çağrı sistemi için en az bir alış/bırakma noktası tanımlamanız gerekiyor.
+              Konumlar QR kod ile misafirlerin shuttle çağırmasını sağlar.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">Konumlar</h1>
         <Button onClick={() => {
@@ -425,9 +440,26 @@ export default function LocationsPage() {
             <p className="text-sm text-muted-foreground text-center">
               Bu QR kodu tarayın, misafir direkt arama sayfasına gider
             </p>
-            <div className="flex gap-2 w-full">
+            <div className="flex gap-2 w-full flex-wrap">
               <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowQR(null); setQrImage(null); }}>
                 Kapat
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={async () => {
+                  if (!showQR) return;
+                  await fetch(`/api/locations/${showQR.id}/qr`, { method: "DELETE" });
+                  await fetch(`/api/locations/${showQR.id}/qr`, { method: "POST" });
+                  toast.success("QR kod yeniden oluşturuldu");
+                  const guestUrl = `${window.location.origin}/guest/call?location=${showQR.id}`;
+                  const dataUrl = await QRCode.toDataURL(guestUrl, { width: 256, margin: 2 });
+                  setQrImage(dataUrl);
+                  load();
+                }}
+              >
+                <RefreshCw className="w-4 h-4 mr-1" /> Yeniden Oluştur
               </Button>
               <Button type="button" className="flex-1" onClick={downloadQR} disabled={!qrImage}>
                 <Download className="w-4 h-4 mr-1" /> İndir

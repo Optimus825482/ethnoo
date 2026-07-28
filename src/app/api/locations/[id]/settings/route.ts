@@ -1,14 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { apiSuccess, apiError } from "@/lib/api-response";
+import { withRateLimit, toRouteHandler } from "@/lib/middleware";
 
-export async function GET(
+async function handleGetLocationSettings(
   _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  ctx: { params?: Record<string, string | string[]> },
 ) {
-  const { id } = await params;
+  const id = ctx.params?.id as string;
   const locationId = parseInt(id, 10);
   if (isNaN(locationId)) {
-    return NextResponse.json({ success: false, error: { code: "INVALID_ID", message: "Invalid location ID" } }, { status: 400 });
+    return apiError("Invalid location ID", 400, "INVALID_ID");
   }
 
   const location = await prisma.location.findUnique({
@@ -16,7 +18,7 @@ export async function GET(
     select: { hotelId: true, hotel: { select: { logo: true, name: true } } },
   });
   if (!location) {
-    return NextResponse.json({ success: false, error: { code: "NOT_FOUND", message: "Location not found" } }, { status: 404 });
+    return apiError("Location not found", 404, "NOT_FOUND");
   }
 
   const settings = await prisma.systemSetting.findMany({
@@ -41,10 +43,16 @@ export async function GET(
     pageConfig.hotelName = location.hotel.name;
   }
 
-  return NextResponse.json({ success: true, data: {
+  return apiSuccess({
     guest_fields_name: map.guest_fields_name || "optional",
     guest_fields_room: map.guest_fields_room || "optional",
     guest_fields_phone: map.guest_fields_phone || "optional",
     pageConfig,
-  }});
+  });
 }
+
+export const GET = toRouteHandler(withRateLimit(
+  "locationSettings",
+  { limit: 60, window: 60 },
+  (req: NextRequest, ctx) => handleGetLocationSettings(req, ctx),
+));

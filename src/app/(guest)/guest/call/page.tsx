@@ -51,6 +51,7 @@ export default function GuestCallPage() {
   const [guestName, setGuestName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
   const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
   // Clock
@@ -134,6 +135,23 @@ export default function GuestCallPage() {
       if (guestName.trim()) body.guestName = guestName.trim();
       if (roomNumber.trim()) body.roomNumber = roomNumber.trim();
       if (phone.trim()) body.phone = phone.trim();
+      // Include custom field values in notes
+      if (Object.keys(customValues).length > 0) {
+        const customParts = Object.keys(customValues)
+          .filter((k) => customValues[k].trim())
+          .map((k) => {
+            const field = config.customFields.find((cf) => cf.id === k);
+            return `${field?.label || k}: ${customValues[k].trim()}`;
+          });
+        if (customParts.length > 0) {
+          const notesParts: string[] = [];
+          if (notes.trim()) notesParts.push(notes.trim());
+          notesParts.push(...customParts);
+          body.notes = notesParts.join(" | ");
+        }
+      } else if (notes.trim()) {
+        body.notes = notes.trim();
+      }
       const res = await fetch("/api/requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const json = await res.json();
       setShowLoading(false);

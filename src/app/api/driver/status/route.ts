@@ -2,13 +2,16 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { apiSuccess, apiError } from "@/lib/api-response";
-import { withAuth, toRouteHandler } from "@/lib/middleware";
+import { withAuth, withRateLimit, toRouteHandler } from "@/lib/middleware";
 
 const bodySchema = z.object({
   driverStatus: z.enum(["ON_DUTY", "OFF_DUTY"]),
 });
 
-export const PATCH = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
+export const PATCH = toRouteHandler(withAuth(withRateLimit(
+  "driverStatus",
+  { limit: 20, window: 60 },
+  async (req: NextRequest, ctx) => {
   try {
     const body = await req.json();
     const result = bodySchema.safeParse(body);
@@ -29,4 +32,4 @@ export const PATCH = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
     console.error("[driver/status]", err);
     return apiError("Failed", 500, "SERVER_ERROR");
   }
-}));
+})));

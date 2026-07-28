@@ -61,7 +61,11 @@ export default function LoginPage() {
       if (json.data.mustChangePassword) {
         router.push("/change-password");
       } else if (json.data.user.role === "ADMIN") {
-        router.push("/admin/dashboard");
+        if (json.data.needsLocations) {
+          router.push("/admin/locations?new=true");
+        } else {
+          router.push("/admin/dashboard");
+        }
       } else {
         router.push("/driver/dashboard");
       }

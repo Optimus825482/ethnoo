@@ -8,7 +8,8 @@ import { Loading } from "@/components/ui/loading";
 import { MonitorMap3D, type MapSelection } from "@/components/monitor/monitor-map-3d";
 import { useMonitorState, initialMonitorData } from "@/hooks/use-monitor-state";
 import { playNotificationSound } from "@/lib/notification-sound";
-import { Bell, BellOff, Maximize2, Minimize2, Car, MapPin, Clock, User, Wifi, WifiOff } from "lucide-react";
+import { Bell, BellOff, Maximize2, Minimize2, Car, MapPin, Clock, User, Wifi, WifiOff, Map as MapIcon, Settings as SettingsIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 function useNow(intervalMs = 15000) {
   const [now, setNow] = useState(() => Date.now());
@@ -26,6 +27,8 @@ function fmtWait(requestedAt: string, now: number) {
 }
 
 export default function MonitorPage() {
+  const router = useRouter();
+  const [monitorEnabled, setMonitorEnabled] = useState<boolean | null>(null);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [fullscreen, setFullscreen] = useState(false);
@@ -37,6 +40,17 @@ export default function MonitorPage() {
   });
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
+
+  useEffect(() => {
+    fetch("/api/admin/settings")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success) {
+          setMonitorEnabled(json.data.monitor_enabled !== "false");
+        }
+      })
+      .catch(() => setMonitorEnabled(true));
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
@@ -61,7 +75,25 @@ export default function MonitorPage() {
     ACCEPTED: "Kabul edildi",
   };
 
-  if (data === initialMonitorData) return <Loading fullPage />;
+  if (data === initialMonitorData || monitorEnabled === null) return <Loading fullPage />;
+
+  if (!monitorEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
+        <div className="rounded-full bg-muted p-6">
+          <MapIcon className="w-12 h-12 text-muted-foreground" />
+        </div>
+        <h1 className="text-2xl font-bold text-center">Canlı Harita İzleme Kapalı</h1>
+        <p className="text-muted-foreground text-center max-w-md">
+          Canlı harita izleme özelliği şu anda devre dışı. Aktif etmek için ayarlar
+          sayfasından &quot;Canlı Harita İzleme&quot; seçeneğini açın.
+        </p>
+        <Button onClick={() => router.push("/admin/settings")}>
+          <SettingsIcon className="w-4 h-4 mr-1" /> Ayarlara Git
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className={fullscreen ? "fixed inset-0 z-50 bg-background p-2 md:p-4 flex flex-col gap-2 md:gap-4" : "space-y-4"}>
