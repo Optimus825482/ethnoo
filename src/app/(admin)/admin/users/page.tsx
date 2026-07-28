@@ -51,6 +51,7 @@ export default function UsersPage() {
   const [currentHash, setCurrentHash] = useState<string | null>(null);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editStep, setEditStep] = useState(0);
 
   async function load() {
     setLoading(true);
