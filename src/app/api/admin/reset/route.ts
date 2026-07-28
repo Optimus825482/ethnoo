@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { apiSuccess } from "@/lib/api-response";
 import { withAuth, withValidation, toRouteHandler } from "@/lib/middleware";
 import { logger } from "@/lib/logger";
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
 
 const resetSchema = z.object({
   confirm: z.literal("SIFIRLA"),
@@ -40,6 +42,15 @@ export const POST = toRouteHandler(
       for (const seq of sequences) {
         await prisma.$executeRawUnsafe(`ALTER SEQUENCE ${seq} RESTART WITH 1`);
       }
+
+      // Clean up uploaded files
+      const publicDir = join(process.cwd(), "public");
+      try { await rm(join(publicDir, "images", "monitor"), { recursive: true, force: true }); } catch {}
+      try { await rm(join(publicDir, "images", "locations"), { recursive: true, force: true }); } catch {}
+      try { await rm(join(publicDir, "images", "hotels"), { recursive: true, force: true }); } catch {}
+      // Recreate dirs for app to work
+      const { mkdir } = await import("node:fs/promises");
+      try { await mkdir(join(publicDir, "images", "locations"), { recursive: true }); } catch {}
 
       logger.warn("System reset completed", { userId: adminId });
 

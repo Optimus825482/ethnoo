@@ -3,7 +3,7 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 
 export const HOTEL_LOGO_DIR = path.resolve(process.cwd(), "public/images/hotels");
-export const HOTEL_LOGO_URL_PREFIX = "/images/hotels/";
+export const HOTEL_LOGO_URL_PREFIX = "/api/uploads/images/hotels/";
 
 export async function storeHotelLogo(base64Data: string): Promise<string> {
   // Parse data URL: data:image/png;base64,XXXX

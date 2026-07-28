@@ -3,7 +3,7 @@ import path from "node:path";
 
 export const MAX_LOGO_BYTES = 500 * 1024;
 export const LOCATION_UPLOAD_DIR = path.resolve(process.cwd(), "public/images/locations");
-export const LOCATION_LOGO_URL_PREFIX = "/images/locations/";
+export const LOCATION_LOGO_URL_PREFIX = "/api/uploads/images/locations/";
 
 const TYPES = [
   { ext: "png", mime: "image/png", matches: (b: Buffer) => b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },

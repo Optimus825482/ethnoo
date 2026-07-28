@@ -8,7 +8,7 @@ import { join } from "node:path";
 
 const MAP_DIR = join(process.cwd(), "public", "images", "monitor");
 const MAP_PATH = join(MAP_DIR, "map.jpg");
-const MAP_URL = "/images/monitor/map.jpg";
+const MAP_URL = "/api/uploads/images/monitor/map.jpg";
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 
 function detectImageType(buffer: Buffer): string | null {

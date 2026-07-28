@@ -524,7 +524,7 @@ export default function LocationsPage() {
                 <p className="text-xs text-muted-foreground">
                   Konumun haritadaki yerini işaretleyin. Haritaya tıklayarak nokta ekleyin.
                 </p>
-                <LocationMapPicker value={mapPoint} onChange={setMapPoint} />
+                <LocationMapPicker value={mapPoint} onChange={setMapPoint} mapUrl={mapUrl} />
               </div>
               <div className="flex gap-2 justify-between pt-2">
                 <Button type="button" variant="outline" onClick={() => setDialogStep(0)}>
