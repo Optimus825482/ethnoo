@@ -255,8 +255,8 @@ export default function LocationsPage() {
         </div>
       )}
 
-      {/* Map upload prerequisite card — show when no map and no locations or isNew */}
-      {!mapUrl && (isNew || locations.length === 0) && (
+      {/* Map upload prerequisite card — show when no map */}
+      {!mapUrl && (
         <Card>
           <CardContent className="p-10">
             <div className="flex flex-col items-center text-center gap-5">
@@ -300,7 +300,7 @@ export default function LocationsPage() {
       {/* Map preview + manage */}
       {mapUrl && (
         <Card className="overflow-hidden">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-4">
               <img src={mapUrl} alt="Otel Haritası" className="h-16 w-auto rounded-lg border object-cover" />
               <div>
@@ -308,19 +308,28 @@ export default function LocationsPage() {
                 <p className="text-sm text-muted-foreground">Konumlar bu harita üzerinde işaretlenir</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                try {
-                  const res = await fetch("/api/admin/settings/map", { method: "DELETE" });
-                  const json = await res.json();
-                  if (json.success) { setMapUrl(null); toast.success("Harita silindi"); }
-                } catch { toast.error("Silme başarısız"); }
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1" /> Haritayı Kaldır
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => document.getElementById("map-upload-input")?.click()}
+              >
+                <Upload className="w-3.5 h-3.5 mr-1" /> Haritayı Değiştir
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/admin/settings/map", { method: "DELETE" });
+                    const json = await res.json();
+                    if (json.success) { setMapUrl(null); toast.success("Harita silindi"); }
+                  } catch { toast.error("Silme başarısız"); }
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-1" /> Kaldır
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
