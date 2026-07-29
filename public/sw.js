@@ -40,7 +40,19 @@ self.addEventListener("fetch", (event) => {
   }
 
   // SSE — skip
-  if (url.pathname.startsWith("/api/sse/")) return;
+  if (url.pathname.startsWith("/api/sse/") || url.pathname.includes("sse")) return;
+
+  // Guest status pages — network only, no cache
+  if (url.pathname.startsWith("/guest/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  // Navigation (HTML) — network only
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   // Static assets — cache-first
   event.respondWith(
