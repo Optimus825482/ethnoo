@@ -60,38 +60,11 @@ export default function SimulatePage() {
   }, [fetchData]);
 
   function handleSimulateClick(location: Location) {
-    setSelectedLocation(location);
-    setDialogOpen(true);
-  }
-
-  async function confirmSimulate() {
-    if (!selectedLocation) return;
-    setSimulating(true);
-    try {
-      const res = await fetch("/api/admin/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locationId: selectedLocation.id }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        toast.success(`Talep oluşturuldu: ${selectedLocation.name}`);
-        setDialogOpen(false);
-        fetchData();
-        // Konuk durum sayfasını yeni sekmede aç
-        const url = `/guest/status/${json.data.id}?capability=${encodeURIComponent(json.data.guestCapability)}`;
-        const w = window.open(url, "_blank");
-        if (!w || w.closed || typeof w.closed === "undefined") {
-          // Pop-up blocked — fallback to same tab
-          router.push(url);
-        }
-      } else {
-        toast.error(json.error?.message || "Talep oluşturulamadı");
-      }
-    } catch {
-      toast.error("Ağ hatası");
-    } finally {
-      setSimulating(false);
+    // Direkt misafir çağrı sayfasını aç — QR kod ile aynı
+    const url = `/guest/call?location=${location.id}`;
+    const w = window.open(url, "_blank");
+    if (!w || w.closed || typeof w.closed === "undefined") {
+      router.push(url);
     }
   }
 
@@ -222,39 +195,7 @@ export default function SimulatePage() {
         </div>
       )}
 
-      {/* Confirmation dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PlayCircle className="w-5 h-5 text-primary" /> Simüle Araç Çağrısı
-            </DialogTitle>
-            <DialogDescription>
-              <span className="font-medium">{selectedLocation?.name}</span> lokasyonundan demo bir araç talebi oluşturulacak.
-              Tüm aktif sürücülere gerçek bildirim gönderilecek.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" /> Sahte misafir adı ve oda numarası oluşturulur
-            </p>
-            <p className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" /> SSE üzerinden anında sürücü bildirimi
-            </p>
-            <p className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-500" /> Sürücü kabul edip tamamlayabilir
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={simulating}>
-              İptal
-            </Button>
-            <Button onClick={confirmSimulate} disabled={simulating}>
-              {simulating ? <Loading size={16} /> : "Araç Çağrısı Başlat"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Direct to guest call page — no simulation API call needed */}
     </div>
   );
 }
