@@ -17,6 +17,7 @@ const updateSettingsSchema = z.object({
   hotel_phone: z.string().max(50).optional(),
   hotel_email: z.string().email().max(255).optional(),
   hotel_address: z.string().max(500).optional(),
+  map_view: z.string().optional(),
 });
 
 export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
@@ -77,6 +78,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   if (data.hotel_phone !== undefined) fields.push({ key: "hotel_phone", value: data.hotel_phone });
   if (data.hotel_email !== undefined) fields.push({ key: "hotel_email", value: data.hotel_email });
   if (data.hotel_address !== undefined) fields.push({ key: "hotel_address", value: data.hotel_address });
+  if (data.map_view !== undefined) fields.push({ key: "map_view", value: data.map_view });
 
   // Update Hotel table for hotel profile fields
   const hotelUpdates: Record<string, string> = {};

@@ -36,6 +36,7 @@ export default function MonitorPage() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [mapControls, setMapControls] = useState<MonitorMapControls | null>(null);
   const [selection, setSelection] = useState<MapSelection>(null);
+  const savedViewRef = useRef<Record<string, number> | null>(null);
   const now = useNow();
 
   const { data, connected } = useMonitorState({
@@ -52,10 +53,37 @@ export default function MonitorPage() {
           setMonitorEnabled(json.data.monitor_enabled !== "false");
           const mUrl = json.data.monitor_map_url;
           setMapUrl(mUrl && mUrl !== "" ? mUrl : null);
+          // Load saved camera view
+          if (json.data.map_view) {
+            try { savedViewRef.current = JSON.parse(json.data.map_view) as Record<string, number>; } catch {}
+          }
         }
       })
       .catch(() => setMonitorEnabled(true));
   }, []);
+
+  // Apply saved view once mapControls ready
+  useEffect(() => {
+    if (!mapControls || !savedViewRef.current) return;
+    const v = savedViewRef.current;
+    mapControls.setCameraState({ radius: v.radius || 70, theta: v.theta || 0.35, phi: v.phi || 0.9, tx: v.tx || 0, ty: v.ty || 0, tz: v.tz || 0 });
+    savedViewRef.current = null;
+  }, [mapControls]);
+
+  // Periodic save camera view (every 10s)
+  useEffect(() => {
+    const t = setInterval(() => {
+      if (!mapControls) return;
+      const s = mapControls.getCameraState();
+      const str = JSON.stringify(s);
+      fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ map_view: str }),
+      }).catch(() => {});
+    }, 10000);
+    return () => clearInterval(t);
+  }, [mapControls]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false); };
@@ -104,8 +132,7 @@ export default function MonitorPage() {
     <div className={fullscreen ? "fixed inset-0 z-50 bg-background p-2 md:p-4 flex flex-col gap-2 md:gap-4" : "space-y-4"}>
       <div className={fullscreen ? "flex-1 min-h-0 relative" : "relative"}>
         {/* harita — tam alan */}
-        <Card className="overflow-hidden h-[calc(100vh-8rem)] md:h-[calc(100vh-6rem)]">
-          <CardContent className="p-0 h-full relative">
+        <div className="overflow-hidden h-[calc(100vh-7rem)] md:h-[calc(100vh-2rem)] relative rounded-xl border border-border">
             <MonitorMap3D
               locations={data.locations}
               buggies={data.buggies}
@@ -246,8 +273,7 @@ export default function MonitorPage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
       </div>
     </div>
   );

@@ -37,15 +37,15 @@ export type MapSelection = { kind: "call" | "buggy"; id: number } | null;
 // --------------- colors ---------------
 
 const BUGGY_COLORS: Record<MapBuggy["status"], number> = {
-  AVAILABLE: 0x22c55e,
-  BUSY: 0xf97316,
-  OFFLINE: 0x6b7280,
-  MAINTENANCE: 0x6b7280,
+  AVAILABLE: 0x00d68f,
+  BUSY: 0xffb800,
+  OFFLINE: 0x9ca3af,
+  MAINTENANCE: 0xef4444,
 };
 
 const CART_PALETTE = [
-  0x111111, 0x0b3d91, 0xe8412f, 0xffd84d, 0x00b36b, 0xf97316,
-  0x8e44ad, 0xf7f7f2, 0x20c7d9, 0xff4fa3, 0x30343b, 0x2563eb,
+  0xff6b00, 0x2563eb, 0xdc2626, 0xfacc15, 0x22d3ee, 0xa855f7,
+  0xf43f5e, 0x10b981, 0x06b6d4, 0xff69b4, 0x84cc16, 0x6366f1,
 ];
 
 // --------------- sprite textures ---------------
@@ -144,6 +144,8 @@ function buildPinCoords(locations: MapLocation[]): PinCoord[] {
 
 // --------------- component ---------------
 
+interface CameraState { radius: number; theta: number; phi: number; tx: number; ty: number; tz: number }
+
 interface SceneCtx {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
@@ -158,6 +160,8 @@ interface SceneCtx {
   toggleViewLock: () => void;
   resetCam3D: () => void;
   resetCamTop: () => void;
+  getCameraState: () => CameraState;
+  setCameraState: (s: CameraState) => void;
 }
 
 export interface MonitorMapControls {
@@ -165,6 +169,9 @@ export interface MonitorMapControls {
   toggleViewLock: () => void;
   vehicleSize: number;
   setVehicleSize: (n: number) => void;
+  getCameraState: () => CameraState;
+  setCameraState: (s: CameraState) => void;
+  saveCameraView: () => void;
 }
 
 export function MonitorMap3D({
@@ -248,6 +255,13 @@ export function MonitorMap3D({
       camera.lookAt(target);
     }
 
+    function getCamState(): CameraState { return { radius: spherical.radius, theta: spherical.theta, phi: spherical.phi, tx: target.x || 0, ty: target.y || 0, tz: target.z || 0 }; }
+    function setCamState(s: CameraState) {
+      spherical = { radius: s.radius, theta: s.theta, phi: s.phi };
+      target.set(s.tx, s.ty, s.tz);
+      updateCam();
+    }
+
     // resize internal: camera merkez tutulur, FOV genişler
     const ctx: SceneCtx = {
       scene, camera, renderer, buggyGroup, callGroup, pinGroup,
@@ -256,6 +270,8 @@ export function MonitorMap3D({
       toggleViewLock() { locked = !locked; setViewLocked(locked); },
       resetCam3D() { spherical = { radius: 70, theta: 0.35, phi: THREE.MathUtils.degToRad(52) }; target.set(0, 0, 0); updateCam(); },
       resetCamTop() { spherical = { radius: 80, theta: 0, phi: THREE.MathUtils.degToRad(1) }; target.set(0, 0, 0); updateCam(); },
+      getCameraState: getCamState,
+      setCameraState: setCamState,
     };
     ctxRef.current = ctx;
 
@@ -457,12 +473,15 @@ export function MonitorMap3D({
   }, [onSelect]);
 
   useEffect(() => {
-    controls?.({
+    controls?.(({
       viewLocked,
       toggleViewLock: () => ctxRef.current?.toggleViewLock(),
       vehicleSize,
       setVehicleSize: (n: number) => setVehicleSize(n),
-    });
+      getCameraState: () => ctxRef.current?.getCameraState() || { radius: 70, theta: 0.35, phi: 52 * Math.PI / 180, tx: 0, ty: 0, tz: 0 },
+      setCameraState: (s: CameraState) => ctxRef.current?.setCameraState(s),
+      saveCameraView() {},
+    }) as MonitorMapControls);
   }, [controls, viewLocked, vehicleSize]);
 
   return (
