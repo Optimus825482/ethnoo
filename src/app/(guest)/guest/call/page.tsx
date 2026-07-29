@@ -163,9 +163,11 @@ function GuestCallContent() {
         toast.error(json.error?.message || tr("connectionError"));
       }
     } catch {
-      setShowLoading(false);
       toast.error(tr("connectionError"));
-    } finally { setSubmitting(false); }
+    } finally {
+      setSubmitting(false);
+      setShowLoading(false);
+    }
   }
 
   function handleButtonClick() {
