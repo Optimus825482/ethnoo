@@ -26,7 +26,8 @@ export type MonitorAction =
   | { type: "upsertRequest"; request: MonitorRequest }
   | { type: "removeRequest"; requestId: number }
   | { type: "setBuggyLocation"; buggyId: number; locationId: number | null }
-  | { type: "setBuggyStatus"; buggyId: number; status: MonitorBuggy["status"] };
+  | { type: "setBuggyStatus"; buggyId: number; status: MonitorBuggy["status"] }
+  | { type: "setBuggyGps"; buggyId: number; latitude: number; longitude: number; gpsAt: string };
 
 export function reducer(state: MonitorData, action: MonitorAction): MonitorData {
   switch (action.type) {
@@ -45,6 +46,10 @@ export function reducer(state: MonitorData, action: MonitorAction): MonitorData 
       return { ...state, buggies: state.buggies.map((b) => (b.id === action.buggyId ? { ...b, currentLocationId: action.locationId } : b)) };
     case "setBuggyStatus":
       return { ...state, buggies: state.buggies.map((b) => (b.id === action.buggyId ? { ...b, status: action.status } : b)) };
+    case "setBuggyGps":
+      return { ...state, buggies: state.buggies.map((b) =>
+        b.id === action.buggyId ? { ...b, gpsLat: action.latitude, gpsLng: action.longitude, gpsAt: action.gpsAt } : b
+      )};
     default:
       return state;
   }
@@ -57,6 +62,9 @@ interface SseEvent {
   buggyId?: number;
   locationId?: number | null;
   status?: MonitorBuggy["status"];
+  latitude?: number;
+  longitude?: number;
+  gpsAt?: string;
 }
 
 export function useMonitorState(opts?: { onNewRequest?: (req: MonitorRequest) => void }) {
@@ -113,6 +121,11 @@ export function useMonitorState(opts?: { onNewRequest?: (req: MonitorRequest) =>
           break;
         case "buggy_status":
           if (ev.buggyId != null && ev.status) dispatch({ type: "setBuggyStatus", buggyId: ev.buggyId, status: ev.status });
+          break;
+        case "buggy_gps":
+          if (ev.buggyId != null && ev.latitude != null && ev.longitude != null) {
+            dispatch({ type: "setBuggyGps", buggyId: ev.buggyId, latitude: ev.latitude, longitude: ev.longitude, gpsAt: ev.gpsAt || new Date().toISOString() });
+          }
           break;
       }
     };

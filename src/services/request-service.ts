@@ -86,7 +86,7 @@ export const RequestService = {
       title: "Yeni Talep",
       body: `${data.guestName || "Misafir"} — ${location.name}`,
       type: "NEW_REQUEST",
-    }).catch(() => {});
+    }).catch((err) => { console.error("[request] sendToDrivers failed:", err); });
 
     return { ...request, guestCapability };
   },

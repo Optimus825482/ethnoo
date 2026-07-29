@@ -8,17 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
-import { Settings, AlertTriangle, CheckCircle, Trash2, Map } from "lucide-react";
+import { Settings, AlertTriangle, CheckCircle, Trash2, Map, Crosshair } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface SettingsState {
   demo_mode: "true" | "false";
   monitor_enabled: "true" | "false";
+  gps_tracking: "true" | "false";
 }
 
 const defaults: SettingsState = {
   demo_mode: "true",
   monitor_enabled: "true",
+  gps_tracking: "true",
 };
 
 export default function SettingsPage() {
@@ -37,6 +39,7 @@ export default function SettingsPage() {
           setSettings({
             demo_mode: (json.data.demo_mode as "true" | "false") || "true",
             monitor_enabled: (json.data.monitor_enabled as "true" | "false") || "true",
+            gps_tracking: (json.data.gps_tracking as "true" | "false") || "true",
           });
         }
       })
@@ -153,6 +156,39 @@ export default function SettingsPage() {
               checked={settings.monitor_enabled === "true"}
               disabled={saving}
               onCheckedChange={(v) => setField("monitor_enabled", v ? "true" : "false")}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* GPS / Konum Takibi */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Crosshair className="w-5 h-5" />
+            GPS Konum Takibi
+          </CardTitle>
+          <CardDescription>
+            Şoförlerden gerçek zamanlı konum bilgisi toplanmasını kontrol eder. Kapalıysa şoför paneli konum izni istemez.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="gps-tracking" className="text-base font-medium">
+                GPS Konum Takibi
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {settings.gps_tracking === "true"
+                  ? "GPS takip aktif — şoförlerin anlık konumu haritada görünür"
+                  : "GPS takip kapalı — şoförlerden konum bilgisi toplanmaz"}
+              </p>
+            </div>
+            <Switch
+              id="gps-tracking"
+              checked={settings.gps_tracking === "true"}
+              disabled={saving}
+              onCheckedChange={(v) => setField("gps_tracking", v ? "true" : "false")}
             />
           </div>
         </CardContent>

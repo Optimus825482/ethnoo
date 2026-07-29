@@ -12,6 +12,7 @@ const updateSettingsSchema = z.object({
   guest_fields_phone: z.enum(["required", "optional", "off"]).optional(),
   guest_page_config: z.string().optional(),
   monitor_enabled: z.enum(["true", "false"]).optional(),
+  gps_tracking: z.enum(["true", "false"]).optional(),
 });
 
 export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
@@ -31,6 +32,7 @@ export const GET = toRouteHandler(withAuth(async (_req: NextRequest, ctx) => {
   if (!("guest_fields_room" in map)) map.guest_fields_room = "optional";
   if (!("guest_fields_phone" in map)) map.guest_fields_phone = "optional";
   if (!("monitor_enabled" in map)) map.monitor_enabled = "true";
+  if (!("gps_tracking" in map)) map.gps_tracking = "true";
 
   return apiSuccess(map);
 }, { role: "ADMIN" }));
@@ -53,6 +55,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   if (data.guest_fields_phone !== undefined) fields.push({ key: "guest_fields_phone", value: data.guest_fields_phone });
   if (data.guest_page_config !== undefined) fields.push({ key: "guest_page_config", value: data.guest_page_config });
   if (data.monitor_enabled !== undefined) fields.push({ key: "monitor_enabled", value: data.monitor_enabled });
+  if (data.gps_tracking !== undefined) fields.push({ key: "gps_tracking", value: data.gps_tracking });
 
   for (const f of fields) {
     await prisma.systemSetting.upsert({
@@ -90,6 +93,7 @@ export const PUT = toRouteHandler(withAuth(async (req: NextRequest, ctx) => {
   }
   if (!("demo_mode" in map)) map.demo_mode = "true";
   if (!("monitor_enabled" in map)) map.monitor_enabled = "true";
+  if (!("gps_tracking" in map)) map.gps_tracking = "true";
 
   return apiSuccess(map);
 }, { role: "ADMIN" }));

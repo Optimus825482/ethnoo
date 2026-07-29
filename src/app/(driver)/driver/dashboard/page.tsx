@@ -88,27 +88,42 @@ export default function DriverDashboard() {
 
   // Check notification + geolocation permissions on mount
   useEffect(() => {
-    if (typeof Notification === "undefined") {
-      setPermNotif("unsupported");
-      setShowPermDialog(true);
-      return;
-    }
-    const np = Notification.permission;
-    setPermNotif(np);
+    async function check() {
+      // Fetch GPS tracking setting first
+      let gpsEnabled = true;
+      try {
+        const r = await fetch("/api/admin/settings");
+        const j = await r.json();
+        if (j.success) gpsEnabled = j.data.gps_tracking !== "false";
+      } catch { /* default: enabled */ }
 
-    if (navigator.permissions?.query) {
-      navigator.permissions.query({ name: "geolocation" as PermissionName })
-        .then((p) => {
+      if (typeof Notification === "undefined") {
+        setPermNotif("unsupported");
+        setShowPermDialog(true);
+        return;
+      }
+      const np = Notification.permission;
+      setPermNotif(np);
+
+      if (!gpsEnabled) {
+        setPermGeo("unsupported"); // treat as unsupported so no geo prompt
+        if (np !== "granted") setShowPermDialog(true);
+        return;
+      }
+
+      if (navigator.permissions?.query) {
+        try {
+          const p = await navigator.permissions.query({ name: "geolocation" as PermissionName });
           setPermGeo(p.state);
-          const needGeo = p.state === "prompt" || p.state === "denied";
-          if (np !== "granted" || needGeo) setShowPermDialog(true);
-        })
-        .catch(() => {
+          if (np !== "granted" || p.state === "prompt" || p.state === "denied") setShowPermDialog(true);
+        } catch {
           if (np !== "granted") setShowPermDialog(true);
-        });
-    } else {
-      if (np !== "granted") setShowPermDialog(true);
+        }
+      } else {
+        if (np !== "granted") setShowPermDialog(true);
+      }
     }
+    check();
   }, []);
 
   async function requestNotifPerm() {
@@ -119,6 +134,12 @@ export default function DriverDashboard() {
 
   async function requestGeoPerm() {
     if (!navigator.geolocation) { setPermGeo("unsupported"); return; }
+    // Check if GPS tracking is enabled first
+    try {
+      const r = await fetch("/api/admin/settings");
+      const j = await r.json();
+      if (j.success && j.data.gps_tracking === "false") { setPermGeo("unsupported"); return; }
+    } catch { /* proceed */ }
     navigator.geolocation.getCurrentPosition(
       () => setPermGeo("granted"),
       (err) => setPermGeo(err.code === 1 ? "denied" : "prompt"),

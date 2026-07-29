@@ -33,24 +33,24 @@ export function getVapidPublicKey(): string {
 export async function sendWebPush(
   subscription: PushSubscription,
   payload: { title: string; body: string },
-): Promise<boolean> {
+): Promise<{ sent: boolean; expired: boolean }> {
   const wp = getWebPush();
-  if (!wp) return false;
+  if (!wp) return { sent: false, expired: false };
 
   try {
     await wp.sendNotification(subscription, JSON.stringify(payload));
-    return true;
+    return { sent: true, expired: false };
   } catch (error: unknown) {
     if (!isWebPushError(error)) {
       console.error("[notif] Web Push failed with an unknown error");
-      return false;
+      return { sent: false, expired: false };
     }
     if (error.statusCode === 410 || error.statusCode === 404) {
-      console.warn("[notif] Web Push subscription expired, will clean up");
-    } else {
-      console.error("[notif] Web Push error:", error.message);
+      console.warn("[notif] Web Push subscription expired, cleaning up");
+      return { sent: false, expired: true };
     }
-    return false;
+    console.error("[notif] Web Push error:", error.message);
+    return { sent: false, expired: false };
   }
 }
 
@@ -71,15 +71,32 @@ export async function sendToDrivers(
     select: { id: true, pushSubscription: true },
   });
 
-  for (const driver of drivers) {
-    if (driver.pushSubscription) {
+  const results = await Promise.allSettled(
+    drivers.map(async (driver) => {
+      if (!driver.pushSubscription) return;
       try {
         const sub = JSON.parse(driver.pushSubscription);
-        await sendWebPush(sub, { title: payload.title, body: payload.body });
+        const r = await sendWebPush(sub, { title: payload.title, body: payload.body });
+        if (r.expired) {
+          await prisma.user.update({
+            where: { id: driver.id },
+            data: { pushSubscription: null },
+          });
+        }
       } catch {
-        // invalid JSON subscription, skip
+        // invalid JSON subscription, clean up
+        await prisma.user.update({
+          where: { id: driver.id },
+          data: { pushSubscription: null },
+        }).catch(() => {});
       }
-    }
+    })
+  );
+
+  // Log any failures
+  const failed = results.filter(r => r.status === "rejected").length;
+  if (failed > 0) {
+    console.warn(`[notif] ${failed} web-push deliveries failed for hotel ${hotelId}`);
   }
 
   // Log notification

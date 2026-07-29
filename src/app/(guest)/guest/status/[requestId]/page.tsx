@@ -29,20 +29,21 @@ interface RequestDetail {
 export default function GuestStatusPage() {
   const params = useParams();
   const requestId = params.requestId as string;
-  const [capability] = useState(() => {
-    // Prefer URL param (for cross-tab via admin simulate), then sessionStorage
+  const [capability, setCapability] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
     const urlCap = new URLSearchParams(window.location.search).get("capability");
     if (urlCap) {
       guestCapabilityStorage.set(requestId, urlCap);
-      // Clean URL without reload
       window.history.replaceState(null, "", window.location.pathname);
-      return urlCap;
+      setCapability(urlCap);
+    } else {
+      setCapability(guestCapabilityStorage.get(requestId) || undefined);
     }
-    return guestCapabilityStorage.get(requestId);
-  });
+  }, [requestId]);
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [missingCapability, setMissingCapability] = useState(() => !capability);
+  const missingCapability = !capability && capability !== undefined;
   const [cancelling, setCancelling] = useState(false);
   const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
 
@@ -142,7 +143,7 @@ export default function GuestStatusPage() {
     if (cancelling) return;
     const capability = guestCapabilityStorage.get(requestId);
     if (!capability) {
-      setMissingCapability(true);
+      toast.error("İşlem yetkiniz bulunamadı, sayfayı yenileyin.");
       return;
     }
     setCancelling(true);

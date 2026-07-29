@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { publishSSE } from "@/lib/event-bus";
 import { apiSuccess, apiError } from "@/lib/api-response";
 import { withAuth, withRateLimit, toRouteHandler } from "@/lib/middleware";
 
@@ -24,14 +25,32 @@ export const POST = toRouteHandler(withAuth(withRateLimit(
       const { driverStatus, latitude, longitude } = result.data;
       const hasGps = latitude != null && longitude != null;
 
-      await prisma.user.update({
+      const user = await prisma.user.update({
         where: { id: ctx.user!.id },
         data: {
           lastHeartbeat: new Date(),
           ...(driverStatus && { driverStatus }),
           ...(hasGps && { lastGpsLat: latitude, lastGpsLng: longitude, lastGpsAt: new Date() }),
         },
+        select: { hotelId: true, id: true },
       });
+
+      // Publish GPS SSE to hotel channel
+      if (hasGps) {
+        const buggy = await prisma.buggyDriver.findFirst({
+          where: { driverId: user.id, buggy: { isActive: true } },
+          select: { buggyId: true },
+        });
+        if (buggy) {
+          publishSSE(`hotel:${user.hotelId}`, {
+            type: "buggy_gps",
+            buggyId: buggy.buggyId,
+            latitude,
+            longitude,
+            gpsAt: new Date().toISOString(),
+          });
+        }
+      }
 
       return apiSuccess({ ok: true, heartbeat: new Date().toISOString() });
     } catch (err) {
