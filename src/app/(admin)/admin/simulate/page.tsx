@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ interface RecentRequest {
 }
 
 export default function SimulatePage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -76,8 +78,13 @@ export default function SimulatePage() {
         toast.success(`Talep oluşturuldu: ${selectedLocation.name}`);
         setDialogOpen(false);
         fetchData();
-        // Konuk durum sayfasını yeni sekmede aç (capability URL param ile)
-        window.open(`/guest/status/${json.data.id}?capability=${encodeURIComponent(json.data.guestCapability)}`, "_blank");
+        // Konuk durum sayfasını yeni sekmede aç
+        const url = `/guest/status/${json.data.id}?capability=${encodeURIComponent(json.data.guestCapability)}`;
+        const w = window.open(url, "_blank");
+        if (!w || w.closed || typeof w.closed === "undefined") {
+          // Pop-up blocked — fallback to same tab
+          router.push(url);
+        }
       } else {
         toast.error(json.error?.message || "Talep oluşturulamadı");
       }
