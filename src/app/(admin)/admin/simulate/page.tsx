@@ -110,19 +110,21 @@ export default function SimulatePage() {
             <PlayCircle className="w-6 h-6" /> Simülasyon
           </h1>
           <p className="text-muted-foreground mt-1">
-            Demo talep simülasyonu
+            Demo talep simulasyonu
           </p>
         </div>
 
-        <Card className="border-amber-500/30 bg-amber-500/5">
-          <CardContent className="pt-6">
+        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/50">
+          <CardContent className="p-5">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="w-6 h-6 text-amber-500 mt-0.5 shrink-0" />
+              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/40">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+              </div>
               <div>
-                <h3 className="font-semibold text-amber-600">Demo Mod Kapalı</h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h3 className="font-semibold text-amber-800 dark:text-amber-400">Demo Mod Kapalı</h3>
+                <p className="text-sm text-amber-700/80 dark:text-amber-500/80 mt-1">
                   Simülasyon modu sadece Demo Mod aktifken kullanılabilir.
-                  Lütfen önce <strong>Ayarlar → Demo Mod</strong> sayfasından demo modu aktif edin.
+                  Lütfen once <strong>Ayarlar - Demo Mod</strong> sayfasından demo modu aktif edin.
                 </p>
               </div>
             </div>
@@ -153,25 +155,25 @@ export default function SimulatePage() {
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
           <MapPin className="w-5 h-5" /> Lokasyonlar ({locations.length})
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {locations.map((loc) => (
-            <Card key={loc.id} className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => handleSimulateClick(loc)}>
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
+            <Card key={loc.id} className="card-hover cursor-pointer" onClick={() => handleSimulateClick(loc)}>
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="flex items-center gap-4 min-w-0">
                   {loc.logo ? (
-                    <img src={loc.logo} alt={loc.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    <img src={loc.logo} alt={loc.name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
                   ) : (
-                    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                      <MapPin className="w-5 h-5 text-muted-foreground" />
+                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                      <MapPin className="w-6 h-6 text-accent" />
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">{loc.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{loc.description || ""}</p>
+                    <p className="font-semibold text-sm truncate">{loc.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{loc.description || " "}</p>
                   </div>
                 </div>
-                <Button size="sm" className="ml-2 shrink-0 gap-1">
-                  <PlayCircle className="w-4 h-4" /> Çağır
+                <Button size="sm" className="ml-3 shrink-0 gap-1.5">
+                  <PlayCircle className="w-3.5 h-3.5" /> Çağır
                 </Button>
               </CardContent>
             </Card>

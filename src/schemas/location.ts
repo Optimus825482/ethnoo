@@ -11,8 +11,8 @@ export const createLocationSchema = z.object({
   logo: z.string().max(500000).optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  mapX: z.number().int().min(0).max(1200).optional(),
-  mapY: z.number().int().min(0).max(820).optional(),
+  mapX: z.number().int().min(0).max(960).optional(),
+  mapY: z.number().int().min(0).max(1097).optional(),
   displayOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
 })
@@ -24,8 +24,8 @@ export const updateLocationSchema = z.object({
   logo: z.string().max(500000).nullable().optional(),
   latitude: z.number().min(-90).max(90).optional(),
   longitude: z.number().min(-180).max(180).optional(),
-  mapX: z.number().int().min(0).max(1200).nullable().optional(),
-  mapY: z.number().int().min(0).max(820).nullable().optional(),
+  mapX: z.number().int().min(0).max(960).nullable().optional(),
+  mapY: z.number().int().min(0).max(1097).nullable().optional(),
   displayOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
 })

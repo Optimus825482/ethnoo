@@ -82,6 +82,51 @@ export default function DriverDashboard() {
   const [pushState, setPushState] = useState<PushState>({ subscribed: false, supported: false });
   const [statusLoading, setStatusLoading] = useState(false);
   const [gpsTracking, setGpsTracking] = useState(false);
+  const [permNotif, setPermNotif] = useState<NotificationPermission | "unsupported" | null>(null);
+  const [permGeo, setPermGeo] = useState<PermissionState | "unsupported" | null>(null);
+  const [showPermDialog, setShowPermDialog] = useState(false);
+
+  // Check notification + geolocation permissions on mount
+  useEffect(() => {
+    if (typeof Notification === "undefined") {
+      setPermNotif("unsupported");
+      setShowPermDialog(true);
+      return;
+    }
+    const np = Notification.permission;
+    setPermNotif(np);
+
+    if (navigator.permissions?.query) {
+      navigator.permissions.query({ name: "geolocation" as PermissionName })
+        .then((p) => {
+          setPermGeo(p.state);
+          const needGeo = p.state === "prompt" || p.state === "denied";
+          if (np !== "granted" || needGeo) setShowPermDialog(true);
+        })
+        .catch(() => {
+          if (np !== "granted") setShowPermDialog(true);
+        });
+    } else {
+      if (np !== "granted") setShowPermDialog(true);
+    }
+  }, []);
+
+  async function requestNotifPerm() {
+    if (typeof Notification === "undefined") return;
+    const r = await Notification.requestPermission();
+    setPermNotif(r);
+  }
+
+  async function requestGeoPerm() {
+    if (!navigator.geolocation) { setPermGeo("unsupported"); return; }
+    navigator.geolocation.getCurrentPosition(
+      () => setPermGeo("granted"),
+      (err) => setPermGeo(err.code === 1 ? "denied" : "prompt"),
+      { enableHighAccuracy: false, timeout: 5000 }
+    );
+  }
+
+  function skipPerm() { setShowPermDialog(false); }
 
   const load = useCallback(async () => {
     try {
@@ -503,6 +548,52 @@ export default function DriverDashboard() {
         )}
       </div>
 
+      {/* Permission prompt dialog — shown first if notifications or geolocation not granted */}
+      <Dialog open={showPermDialog} onOpenChange={setShowPermDialog}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-accent" /> İzinler Gerekli</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Sürücü panelinin çalışması için aşağıdaki izinlere ihtiyaç var.
+            </p>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold flex items-center gap-1.5"><Bell className="w-4 h-4" /> Bildirimler</p>
+                <p className="text-xs text-muted-foreground">Yeni araç çağrılarında anlık bildirim</p>
+              </div>
+              {permNotif === "granted" ? (
+                <Badge variant="success">İzinli</Badge>
+              ) : permNotif === "unsupported" ? (
+                <Badge variant="secondary">Desteklenmiyor</Badge>
+              ) : (
+                <Button size="sm" onClick={requestNotifPerm}>İzin Ver</Button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold flex items-center gap-1.5"><MapPin className="w-4 h-4" /> Konum</p>
+                <p className="text-xs text-muted-foreground">GPS ile araç konumu izleme</p>
+              </div>
+              {permGeo === "granted" ? (
+                <Badge variant="success">İzinli</Badge>
+              ) : permGeo === "unsupported" || permGeo === "denied" ? (
+                <Badge variant="secondary">{permGeo === "denied" ? "Reddedildi" : "Desteklenmiyor"}</Badge>
+              ) : (
+                <Button size="sm" variant="outline" onClick={requestGeoPerm}>İzin Ver</Button>
+              )}
+            </div>
+
+            <Button className="w-full" onClick={skipPerm}>
+              {permNotif === "granted" && (permGeo === "granted" || permGeo === "unsupported") ? "Devam Et" : "Atla"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Location selection dialog */}
       <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
         <DialogContent className="sm:max-w-sm">
@@ -527,12 +618,7 @@ export default function DriverDashboard() {
                 <SelectContent>
                   {locations.length > 0 ? (
                     locations.map((l) => (
-                      <SelectItem key={l.id} value={String(l.id)}>
-                        <span className="flex items-center gap-2">
-                          {l.logo && <img src={l.logo} alt="" className="w-4 h-4 rounded object-cover" />}
-                          {l.name}
-                        </span>
-                      </SelectItem>
+                      <SelectItem key={l.id} value={String(l.id)}>{l.name}</SelectItem>
                     ))
                   ) : (
                     <div className="px-3 py-2 text-sm text-muted-foreground">Konum yüklenemedi</div>

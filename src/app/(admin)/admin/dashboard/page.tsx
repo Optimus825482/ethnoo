@@ -49,12 +49,12 @@ interface Notification {
   color: string;
 }
 
-const badgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  PENDING: "secondary",
+const badgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+  PENDING: "warning",
   ACCEPTED: "default",
-  COMPLETED: "default",
+  COMPLETED: "success",
   CANCELLED: "destructive",
-  UNANSWERED: "outline",
+  UNANSWERED: "secondary",
 };
 
 const statusLabels: Record<string, string> = {
@@ -65,11 +65,11 @@ const statusLabels: Record<string, string> = {
   UNANSWERED: "CEVAPSIZ",
 };
 
-const buggyStatusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  AVAILABLE: "default",
-  BUSY: "secondary",
-  OFFLINE: "destructive",
-  MAINTENANCE: "outline",
+const buggyStatusVariant: Record<string, "default" | "secondary" | "destructive" | "outline" | "success" | "warning"> = {
+  AVAILABLE: "success",
+  BUSY: "warning",
+  OFFLINE: "secondary",
+  MAINTENANCE: "destructive",
 };
 
 const buggyStatusLabels: Record<string, string> = {
@@ -123,6 +123,8 @@ export default function AdminDashboard() {
     playNotificationSound("notification");
   }
 
+  const loadRef = useRef<() => Promise<void>>(async () => {});
+
   useEffect(() => {
     async function load() {
       try {
@@ -131,36 +133,44 @@ export default function AdminDashboard() {
           fetch("/api/requests/active"),
           fetch("/api/buggies"),
         ]);
-        const sumJson = await sumRes.json();
-        const actJson = await actRes.json();
-        const bugJson = await bugRes.json();
+        const [sumJson, actJson, bugJson] = await Promise.all([sumRes.json(), actRes.json(), bugRes.json()]);
         if (sumJson.success) setSummary(sumJson.data);
         if (actJson.success) setActive(actJson.data);
         if (bugJson.success) setBuggies(bugJson.data.items);
-      } finally {
+      } catch { /* network error — keep stale */ } finally {
         setLoading(false);
       }
     }
+    loadRef.current = load;
     load();
     const interval = setInterval(load, 5000);
     return () => clearInterval(interval);
   }, []);
 
-  // SSE for real-time notifications
+  // SSE for real-time notifications + auto-refresh on events
   useEffect(() => {
     const es = new EventSource("/api/sse/admin");
     es.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data);
+        let touched = false;
         if (event.type === "new_request" && event.request) {
           addNotification("new", `Yeni talep: ${event.request.location?.name || "Konum"} #${event.request.id}`, "bell", "text-blue-600");
+          touched = true;
         } else if (event.type === "request_accepted" && event.requestId) {
           addNotification("accept", `Talep #${event.requestId} kabul edildi`, "check", "text-emerald-600");
+          touched = true;
         } else if (event.type === "request_completed" && event.requestId) {
           addNotification("complete", `Talep #${event.requestId} tamamlandı`, "check", "text-emerald-600");
+          touched = true;
         } else if (event.type === "request_cancelled" && event.requestId) {
           addNotification("cancel", `Talep #${event.requestId} iptal edildi`, "x", "text-red-600");
+          touched = true;
+        } else if (event.type === "buggy_status" || event.type === "buggy_location") {
+          touched = true;
         }
+        // Refresh dashboard data immediately on relevant events
+        if (touched) void loadRef.current();
       } catch { /* ignore */ }
     };
     es.onerror = () => { /* auto-reconnect */ };
@@ -180,8 +190,56 @@ export default function AdminDashboard() {
   ].filter((d) => d.value > 0) : [];
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl sm:text-2xl font-bold">Yönetim Paneli</h1>
+    <div className="space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Yönetim Paneli</h1>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10">
+              <Clock className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Toplam</p>
+              <p className="text-2xl font-bold tracking-tight">{summary?.total ?? 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50">
+              <AlertCircle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Bekleyen</p>
+              <p className="text-2xl font-bold tracking-tight">{summary?.pending ?? 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+              <CheckCircle className="w-5 h-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Tamamlanan</p>
+              <p className="text-2xl font-bold tracking-tight">{summary?.completed ?? 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50">
+              <XCircle className="w-5 h-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">İptal</p>
+              <p className="text-2xl font-bold tracking-tight">{summary?.cancelled ?? 0}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main grid: left (buggies + requests), right (notifications) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -282,11 +340,11 @@ export default function AdminDashboard() {
             {notifications.length === 0 ? (
               <p className="text-muted-foreground text-sm py-8 text-center">Bildirim yok</p>
             ) : (
-              <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                 {notifications.map((n) => (
                   <div
                     key={n.id}
-                    className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/40 border border-border/50"
+                    className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/40 border border-border/50"
                     style={{ animation: "fadeInUp 0.3s ease-out" }}
                   >
                     {n.icon === "bell" && <Bell className={`w-4 h-4 shrink-0 mt-0.5 ${n.color}`} />}
@@ -294,8 +352,8 @@ export default function AdminDashboard() {
                     {n.icon === "x" && <XCircle className={`w-4 h-4 shrink-0 mt-0.5 ${n.color}`} />}
                     {n.icon === "alert" && <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${n.color}`} />}
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs sm:text-sm break-words">{n.message}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">{n.time}</p>
+                      <p className="text-xs sm:text-sm break-words leading-relaxed">{n.message}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1">{n.time}</p>
                     </div>
                   </div>
                 ))}
@@ -305,50 +363,10 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Metrics + Charts */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <Clock className="w-8 h-8 text-primary shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Toplam</p>
-              <p className="text-xl sm:text-2xl font-bold">{summary?.total ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="w-8 h-8 text-amber-600 shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Bekleyen</p>
-              <p className="text-xl sm:text-2xl font-bold">{summary?.pending ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <CheckCircle className="w-8 h-8 text-emerald-600 shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">Tamamlanan</p>
-              <p className="text-xl sm:text-2xl font-bold">{summary?.completed ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <XCircle className="w-8 h-8 text-destructive shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground">İptal</p>
-              <p className="text-xl sm:text-2xl font-bold">{summary?.cancelled ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Time metrics + pie chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Timer className="w-4 h-4 text-primary" /> Ort. Tepki Süresi
             </CardTitle>
@@ -361,7 +379,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-emerald-600" /> Ort. Tamamlama Süresi
             </CardTitle>
@@ -375,11 +393,11 @@ export default function AdminDashboard() {
         </Card>
         {pieData.length > 0 && (
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Durum Dağılımı</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-40 sm:h-48">
+              <div className="h-44 sm:h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ value }) => value}>

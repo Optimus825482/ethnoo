@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="flex min-h-[100dvh]">
       <AdminNav user={{ fullName: json.data.user.fullName }} />
-      <main className="flex-1 overflow-auto p-4 md:p-6 pt-14 md:pt-6 max-w-full">
+      <main className="flex-1 overflow-auto p-4 md:p-8 pt-14 md:pt-8 pb-20 md:pb-8 w-full max-w-[1600px] mx-auto">
         <Suspense fallback={<Loading fullPage />}>{children}</Suspense>
       </main>
     </div>

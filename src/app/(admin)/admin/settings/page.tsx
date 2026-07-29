@@ -76,12 +76,12 @@ export default function SettingsPage() {
   if (loading) return <Loading fullPage />;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Settings className="w-6 h-6" /> Ayarlar
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Settings className="w-7 h-7" /> Ayarlar
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1.5">
           Sistem ayarlarını yapılandırın
         </p>
       </div>
@@ -89,7 +89,7 @@ export default function SettingsPage() {
       {/* Demo Mode */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="text-lg flex items-center gap-2">
             {settings.demo_mode === "true" ? (
               <AlertTriangle className="w-5 h-5 text-amber-500" />
             ) : (
@@ -102,10 +102,10 @@ export default function SettingsPage() {
             e-posta girmek zorunda kalmaz. Kapatıldığında bu zorunluluklar devreye girer.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
+        <CardContent>
+          <div className="flex items-center justify-between gap-6">
             <div className="space-y-1">
-              <Label htmlFor="demo-mode" className="text-base">
+              <Label htmlFor="demo-mode" className="text-base font-medium">
                 Demo Mod
               </Label>
               <p className="text-sm text-muted-foreground">
@@ -127,7 +127,7 @@ export default function SettingsPage() {
       {/* Canlı Harita İzleme */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="text-lg flex items-center gap-2">
             <Map className="w-5 h-5" />
             Canlı Harita İzleme
           </CardTitle>
@@ -136,10 +136,10 @@ export default function SettingsPage() {
             araçların ve çağrıların anlık konumlarını görebilirsiniz.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
+        <CardContent>
+          <div className="flex items-center justify-between gap-6">
             <div className="space-y-1">
-              <Label htmlFor="monitor-enabled" className="text-base">
+              <Label htmlFor="monitor-enabled" className="text-base font-medium">
                 Canlı Harita
               </Label>
               <p className="text-sm text-muted-foreground">
@@ -159,9 +159,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Sistem Sıfırlama */}
-      <Card className="border-destructive/30">
+      <Card className="border-destructive/30 bg-red-50/40">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
+          <CardTitle className="text-lg flex items-center gap-2 text-destructive">
             <Trash2 className="w-5 h-5" />
             Sistem Sıfırlama
           </CardTitle>
@@ -176,7 +176,7 @@ export default function SettingsPage() {
               Devam etmek için aşağıya &quot;SIFIRLA&quot; yazın ve butona basın.
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Input
               value={resetConfirm}
               onChange={(e) => setResetConfirm(e.target.value)}
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                 }
               }}
             >
-              {resetting ? <Loading size={16} /> : <Trash2 className="w-4 h-4 mr-1" />}
+              {resetting ? <Loading size={16} /> : <Trash2 className="w-4 h-4 mr-1.5" />}
               Sistemi Sıfırla
             </Button>
           </div>

@@ -40,6 +40,17 @@ const actionLabels: Record<string, string> = {
   CANCEL_REQUEST: "Talep İptal",
 };
 
+const actionVariant = (action: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | null | undefined => {
+  if (action.startsWith("CREATE_") || action === "GENERATE_QR") return "success";
+  if (action.startsWith("DELETE_") || action === "CANCEL_REQUEST") return "destructive";
+  if (action === "ACCEPT_REQUEST" || action === "COMPLETE_REQUEST") return "success";
+  if (action === "LOGIN" || action === "LOGOUT") return "secondary";
+  if (action === "CHANGE_PASSWORD") return "secondary";
+  if (action === "ASSIGN_DRIVER") return "success";
+  if (action === "UNASSIGN_DRIVER") return "secondary";
+  return "default";
+};
+
 export default function AuditPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,28 +69,31 @@ export default function AuditPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Denetim Günlüğü</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Denetim Günlüğü</h1>
+        <p className="text-sm text-muted-foreground mt-1">Tüm yönetim işlemlerinin kaydı</p>
+      </div>
 
       <Card>
         <CardContent className="p-0">
           {logs.length === 0 ? (
-            <EmptyState icon={<FileText className="h-12 w-12" />} title="Kayıt yok" description="İşlemler burada görünecek" />
+            <EmptyState icon={<FileText className="h-12 w-12" />} title="Kayit yok" description="İşlemler burada gorunecek" />
           ) : (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>İşlem</TableHead>
-                  <TableHead>Varlık</TableHead>
-                  <TableHead>Kullanıcı</TableHead>
-                  <TableHead>IP</TableHead>
-                  <TableHead>Saat</TableHead>
+                <TableRow className="bg-muted hover:bg-muted">
+                  <TableHead className="uppercase text-xs tracking-wider">İşlem</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider">Varlık</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider">Kullanıcı</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider">IP</TableHead>
+                  <TableHead className="uppercase text-xs tracking-wider">Saat</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.map((l) => (
                   <TableRow key={l.id}>
                     <TableCell>
-                      <Badge variant="secondary">{actionLabels[l.action] || l.action}</Badge>
+                      <Badge variant={actionVariant(l.action)}>{actionLabels[l.action] || l.action}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">{l.entityType} #{l.entityId || "—"}</TableCell>
                     <TableCell className="text-sm">{l.user?.fullName || "Sistem"}</TableCell>

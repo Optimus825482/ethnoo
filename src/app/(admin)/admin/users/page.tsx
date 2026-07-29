@@ -176,7 +176,7 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Kullanıcılar</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Kullanıcılar</h1>
         <Button onClick={() => setShowDialog(true)}>
           <Plus className="w-4 h-4 mr-1" /> Kullanıcı Ekle
         </Button>
@@ -246,7 +246,7 @@ export default function UsersPage() {
             <div className="space-y-2">
               <Label htmlFor="password">Şifre</Label>
               <Input id="password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-              <p className="text-xs text-muted-foreground">En az 8 karakter, büyük/küçük/rakam/özel</p>
+              <p className="text-xs text-muted-foreground">En az 6 karakter, harf ve rakam</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Rol</Label>
@@ -291,7 +291,7 @@ export default function UsersPage() {
           <div className="flex gap-2 mb-2">
             {[0, 1, 2].map((s) => (
               <div key={s} className="flex-1">
-                <div className={`h-1.5 rounded-full transition-colors ${s <= editStep ? "bg-primary" : "bg-muted"}`} />
+                <div className={`h-1.5 rounded-full transition-colors ${s <= editStep ? "bg-accent" : "bg-muted"}`} />
               </div>
             ))}
           </div>
@@ -387,7 +387,7 @@ export default function UsersPage() {
                       {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-muted-foreground">En az 8 karakter, büyük/küçük/rakam/özel</p>
+                  <p className="text-xs text-muted-foreground">En az 6 karakter, harf ve rakam</p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-3">

@@ -243,11 +243,11 @@ export default function LocationsPage() {
     <div className="space-y-6">
       {/* First-time warning */}
       {isNew && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 shrink-0" />
           <div>
-            <h3 className="font-semibold text-amber-600">En az bir konum oluşturmalısınız</h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <h3 className="font-semibold text-amber-800">En az bir konum oluşturmalısınız</h3>
+            <p className="text-sm text-amber-700/70 mt-1">
               Shuttle çağrı sistemi için en az bir alış/bırakma noktası tanımlamanız gerekiyor.
               {!mapUrl && " Önce otel haritasını yükleyin, sonra haritadan konumları işaretleyin."}
             </p>
@@ -257,14 +257,14 @@ export default function LocationsPage() {
 
       {/* Map upload prerequisite card — show when no map and no locations or isNew */}
       {!mapUrl && (isNew || locations.length === 0) && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="p-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="rounded-full bg-primary/10 p-4">
-                <MapIcon className="w-10 h-10 text-primary" />
+        <Card>
+          <CardContent className="p-10">
+            <div className="flex flex-col items-center text-center gap-5">
+              <div className="rounded-full bg-accent/10 p-5">
+                <MapIcon className="w-12 h-12 text-accent" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold">Adım 1: Otel Haritasını Yükleyin</h3>
+                <h3 className="text-lg font-bold tracking-tight">Adım 1: Otel Haritasını Yükleyin</h3>
                 <p className="text-sm text-muted-foreground mt-2 max-w-md">
                   Konum eklemeye başlamadan önce otel yerleşke haritasını yükleyin.
                   Harita PNG, JPG veya WebP formatında, maksimum 5MB olmalıdır.
@@ -327,7 +327,7 @@ export default function LocationsPage() {
 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Konumlar</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Konumlar</h1>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -466,108 +466,123 @@ export default function LocationsPage() {
 
       {/* Step-by-step wizard dialog */}
       <Dialog open={showDialog} onOpenChange={(open) => { if (!open) resetForm(); }}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-5xl flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle>
               {editing ? "Konum Düzenle" : `Yeni Konum — Adım ${dialogStep + 1}/2`}
             </DialogTitle>
           </DialogHeader>
 
           {/* Step indicators */}
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-2 mb-2 shrink-0">
             {[0, 1].map((s) => (
               <div key={s} className="flex-1">
                 <div className={`h-1.5 rounded-full transition-colors ${
-                  s <= dialogStep ? "bg-primary" : "bg-muted"
+                  s <= dialogStep ? "bg-accent" : "bg-muted"
                 }`} />
               </div>
             ))}
           </div>
 
-          {/* Step 0: Basic info + logo */}
-          {dialogStep === 0 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Konum Logosu</Label>
-                <div className="flex items-center gap-4">
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="w-16 h-16 rounded-lg object-cover border border-border" />
-                  ) : (
-                    <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center border border-border">
-                      <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Button
-                      type="button" variant="outline" size="sm"
-                      onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file"; input.accept = "image/*";
-                        input.onchange = (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (!file) return;
-                          if (file.size > 500000) { toast.error("Dosya çok büyük (maks 500KB)"); return; }
-                          if (!file.type.startsWith("image/")) { toast.error("Sadece resim"); return; }
-                          setPendingLogoFile(file);
-                          setLogoPreview(URL.createObjectURL(file));
-                        };
-                        input.click();
-                      }}
-                    >
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Resim Seç
-                    </Button>
-                    {logoPreview && (
-                      <Button type="button" variant="ghost" size="sm" className="text-destructive"
-                        onClick={() => { setLogoPreview(null); setPendingLogoFile(null); }}>
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+          {/* Scrollable body */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            {/* Step 0: Basic info + logo */}
+            {dialogStep === 0 && (
+              <div className="space-y-4 px-0.5">
+                <div className="space-y-2">
+                  <Label>Konum Logosu</Label>
+                  <div className="flex items-center gap-4">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo" className="w-16 h-16 rounded-lg object-cover border border-border" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center border border-border">
+                        <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                      </div>
                     )}
+                    <div className="flex gap-2">
+                      <Button
+                        type="button" variant="outline" size="sm"
+                        onClick={() => {
+                          const input = document.createElement("input");
+                          input.type = "file"; input.accept = "image/*";
+                          input.onchange = (e) => {
+                            const file = (e.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+                            if (file.size > 500000) { toast.error("Dosya çok büyük (maks 500KB)"); return; }
+                            if (!file.type.startsWith("image/")) { toast.error("Sadece resim"); return; }
+                            setPendingLogoFile(file);
+                            setLogoPreview(URL.createObjectURL(file));
+                          };
+                          input.click();
+                        }}
+                      >
+                        <Upload className="w-3.5 h-3.5 mr-1" /> Resim Seç
+                      </Button>
+                      {logoPreview && (
+                        <Button type="button" variant="ghost" size="sm" className="text-destructive"
+                          onClick={() => { setLogoPreview(null); setPendingLogoFile(null); }}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                  <p className="text-xs text-muted-foreground">PNG, JPG · maks 500KB</p>
                 </div>
-                <p className="text-xs text-muted-foreground">PNG, JPG · maks 500KB</p>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Ad *</Label>
+                  <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Açıklama</Label>
+                  <Input id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="displayOrder">Görüntüleme Sırası</Label>
+                  <Input id="displayOrder" type="number" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Ad *</Label>
-                <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            )}
+
+            {/* Step 1: Map point picker */}
+            {dialogStep === 1 && (
+              <div className="flex flex-col h-[60vh]">
+                <div className="mb-2 shrink-0">
+                  <Label>Harita Noktası</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Konumun haritadaki yerini işaretleyin. Haritaya tıklayarak nokta ekleyin.
+                  </p>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <LocationMapPicker value={mapPoint} onChange={setMapPoint} mapUrl={mapUrl} height="h-full" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Açıklama</Label>
-                <Input id="description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="displayOrder">Görüntüleme Sırası</Label>
-                <Input id="displayOrder" type="number" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: e.target.value })} />
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
+            )}
+          </div>
+
+          {/* Footer: navigation buttons per step */}
+          <div className="flex gap-2 -mx-5 -mb-5 px-5 py-4 rounded-b-xl border-t border-border bg-muted/50 shrink-0">
+            {dialogStep === 0 && (
+              <>
                 <Button type="button" variant="outline" onClick={() => resetForm()}>İptal</Button>
+                <div className="flex-1" />
                 <Button type="button" onClick={() => setDialogStep(1)} disabled={!canGoNext(0)}>
                   Devam Et <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 1: Map point picker */}
-          {dialogStep === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Harita Noktası</Label>
-                <p className="text-xs text-muted-foreground">
-                  Konumun haritadaki yerini işaretleyin. Haritaya tıklayarak nokta ekleyin.
-                </p>
-                <LocationMapPicker value={mapPoint} onChange={setMapPoint} mapUrl={mapUrl} />
-              </div>
-              <div className="flex gap-2 justify-between pt-2">
+              </>
+            )}
+            {dialogStep === 1 && (
+              <>
                 <Button type="button" variant="outline" onClick={() => setDialogStep(0)}>
                   <ArrowLeft className="w-4 h-4 mr-1" /> Geri
                 </Button>
+                <div className="flex-1" />
                 <Button type="button" onClick={handleSubmit}>
                   <Check className="w-4 h-4 mr-1" />
                   {editing ? "Güncelle" : "Konumu Oluştur"}
                 </Button>
-              </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

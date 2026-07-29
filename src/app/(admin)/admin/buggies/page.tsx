@@ -45,11 +45,13 @@ interface Driver {
   username: string;
 }
 
-const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  AVAILABLE: "default",
-  BUSY: "secondary",
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline" | "success" | "warning";
+
+const statusVariant: Record<string, BadgeVariant> = {
+  AVAILABLE: "success",
+  BUSY: "warning",
   OFFLINE: "destructive",
-  MAINTENANCE: "outline",
+  MAINTENANCE: "secondary",
 };
 
 const statusLabels: Record<string, string> = {
@@ -167,7 +169,7 @@ export default function BuggiesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">Araçlar</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Araçlar</h1>
         <Button onClick={() => { setEditing(null); setForm({ code: "", model: "", licensePlate: "", icon: "🚗" }); setShowDialog(true); }}>
           <Plus className="w-4 h-4 mr-1" /> Araç Ekle
         </Button>

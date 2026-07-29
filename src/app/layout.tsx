@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { Roboto } from "next/font/google";
+import { Montserrat, Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 
-const roboto = Roboto({
-  variable: "--font-roboto",
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500", "700", "900"],
+  weight: ["400", "600", "700", "800"],
 });
 
-const robotoMono = Roboto({
-  variable: "--font-roboto-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
 });
 
 export const viewport: Viewport = {
@@ -53,7 +53,7 @@ export default function RootLayout({
     <html
       lang="tr"
       suppressHydrationWarning
-      className={`${roboto.variable} ${robotoMono.variable} h-full antialiased`}
+      className={`${montserrat.variable} ${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>{children}</Providers>

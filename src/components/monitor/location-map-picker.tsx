@@ -1,116 +1,171 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { MAP_W, MAP_H, MAP_TEXTURE_URL } from "./map-static";
-import { Maximize2, Minimize2, ZoomIn, ZoomOut } from "lucide-react";
+import { useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { IMG_W, IMG_H, MAP_TEXTURE_URL } from "./map-static";
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, X } from "lucide-react";
 
-export function LocationMapPicker({ value, onChange, mapUrl }: {
+export function LocationMapPicker({ value, onChange, mapUrl, height = "max-h-[280px]" }: {
   value: { x: number; y: number } | null;
   onChange: (v: { x: number; y: number } | null) => void;
   mapUrl?: string | null;
+  height?: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const src = mapUrl || MAP_TEXTURE_URL;
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
 
-  function handleClick(e: React.MouseEvent) {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * MAP_W);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * MAP_H);
-    if (x < 0 || x > MAP_W || y < 0 || y > MAP_H) return;
-    onChange({ x, y });
-  }
+  // Compute pixel coords from pointer position relative to image's rendered rect.
+  const computePoint = useCallback((clientX: number, clientY: number): { x: number; y: number } | null => {
+    const img = imgRef.current;
+    if (!img) return null;
+    const r = img.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return null;
+    const imgX = ((clientX - r.left) / r.width) * IMG_W;
+    const imgY = ((clientY - r.top) / r.height) * IMG_H;
+    const x = Math.round(imgX);
+    const y = Math.round(imgY);
+    if (x < 0 || x > IMG_W || y < 0 || y > IMG_H) return null;
+    return { x, y };
+  }, []);
 
-  const wrapperClass = fullscreen
-    ? "fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
-    : "relative";
+  // Click vs drag detection
+  const downRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  const movedRef = useRef(false);
 
-  return (
-    <div className={wrapperClass}>
-      {fullscreen && (
-        <button
-          type="button"
-          className="absolute top-4 right-4 z-10 bg-white/20 backdrop-blur text-white rounded-full p-2 hover:bg-white/30"
-          onClick={() => setFullscreen(false)}
-        >
-          <Minimize2 className="w-5 h-5" />
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    downRef.current = { x: e.clientX, y: e.clientY, t: Date.now() };
+    movedRef.current = false;
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const down = downRef.current;
+    if (!down) return;
+    if (Math.abs(e.clientX - down.x) + Math.abs(e.clientY - down.y) > 6) {
+      movedRef.current = true;
+    }
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const down = downRef.current;
+    downRef.current = null;
+    if (!down) return;
+    if (movedRef.current) return;
+    const pt = computePoint(e.clientX, e.clientY);
+    if (pt) onChange(pt);
+  }, [computePoint, onChange]);
+
+  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(4, z + 0.5)), []);
+  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(0.5, z - 0.5)), []);
+  const handleToggleFullscreen = useCallback(() => setFullscreen((f) => !f), []);
+  const handlePointRemove = useCallback(() => onChange(null), [onChange]);
+
+  const toolbar = (
+    <div className="flex items-center gap-1">
+      <button type="button" className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
+        onClick={handleZoomOut} title="Uzaklaştır">
+        <ZoomOut className="w-4 h-4" />
+      </button>
+      <span className="text-xs text-muted-foreground w-8 text-center tabular-nums">{zoom}x</span>
+      <button type="button" className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
+        onClick={handleZoomIn} title="Yakınlaştır">
+        <ZoomIn className="w-4 h-4" />
+      </button>
+      <button type="button" className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
+        onClick={handleToggleFullscreen} title={fullscreen ? "Küçült" : "Tam ekran"}>
+        {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+
+  const containerClass = fullscreen
+    ? "flex-1 min-h-0 overflow-auto touch-pan"
+    : `${height} overflow-auto touch-pan`;
+
+  // Wrapper sized exactly to image; marker positioned relative to it → scrolls with image.
+  const imgW = IMG_W * zoom;
+  const imgH = IMG_H * zoom;
+
+  const marker = value && (
+    <div
+      className="absolute z-10 pointer-events-none"
+      style={{
+        left: (value.x / IMG_W) * 100 + "%",
+        top: (value.y / IMG_H) * 100 + "%",
+      }}
+    >
+      <div className="-translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-accent border-[3px] border-white shadow-md flex items-center justify-center">
+        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+      </div>
+    </div>
+  );
+
+  const mapEl = (
+    <div
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      className={`relative cursor-crosshair rounded-xl border-2 border-border bg-white overflow-auto ${containerClass}`}
+    >
+      {/* Inner wrapper = exact image size. Image + marker both live here → scroll together. */}
+      <div className="relative" style={{ width: imgW, height: imgH }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- runtime URL */}
+        <img
+          ref={imgRef}
+          src={src}
+          alt="Harita"
+          className="block select-none"
+          style={{ width: imgW, height: imgH }}
+          draggable={false}
+        />
+        {marker}
+      </div>
+    </div>
+  );
+
+  const fullscreenOverlay = fullscreen && createPortal(
+    <div className="fixed inset-0 z-[200] bg-black/85 flex flex-col p-3 sm:p-5">
+      <div className="flex items-center justify-between text-white shrink-0 mb-2 gap-2">
+        <p className="text-xs sm:text-sm font-medium truncate">
+          Haritaya tıklayarak konum seçin.
+          {value ? ` Seçili: (${value.x}, ${value.y})` : " Nokta seçilmedi."}
+        </p>
+        <div className="flex items-center gap-1 shrink-0">
+          {toolbar}
+          <button type="button" className="bg-white/20 hover:bg-white/30 text-white rounded-full p-2 ml-1"
+            onClick={() => setFullscreen(false)} title="Kapat">
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </div>
+      </div>
+      {mapEl}
+      {value && (
+        <button type="button" className="text-white/70 hover:text-white underline text-xs sm:text-sm mt-2 self-start"
+          onClick={handlePointRemove}>
+          Noktayı kaldır
         </button>
       )}
+    </div>,
+    document.body
+  );
 
-      <div className="space-y-1 w-full">
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Haritaya tıklayarak konum noktası seçin.
-            {value ? ` Seçili: (${value.x}, ${value.y})` : " Henüz nokta seçilmedi."}
-          </p>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
-              onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
-              title="Uzaklaştır"
-            >
-              <ZoomOut className="w-4 h-4" />
-            </button>
-            <span className="text-xs text-muted-foreground w-8 text-center">{zoom}x</span>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
-              onClick={() => setZoom((z) => Math.min(4, z + 0.5))}
-              title="Yakınlaştır"
-            >
-              <ZoomIn className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              className="text-muted-foreground hover:text-foreground rounded p-1 hover:bg-muted"
-              onClick={() => setFullscreen((f) => !f)}
-              title={fullscreen ? "Küçült" : "Tam ekran"}
-            >
-              {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        <div
-          ref={ref}
-          onClick={handleClick}
-          className={`relative cursor-crosshair rounded-lg overflow-auto border border-border ${fullscreen ? "max-h-[80vh] max-w-[90vw]" : "max-h-[300px] inline-block"}`}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element -- runtime URL, Image component can't handle */}
-          <img
-            src={src}
-            alt="Harita"
-            className="block"
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: "top left",
-              maxWidth: zoom === 1 ? "100%" : "none",
-              maxHeight: zoom === 1 ? "260px" : "none",
-            }}
-            draggable={false}
-          />
-          {value && (
-            <div
-              className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-              style={{
-                left: `${(value.x / MAP_W) * 100}%`,
-                top: `${(value.y / MAP_H) * 100}%`,
-              }}
-            >
-              <div className="w-5 h-5 rounded-full bg-red-500 border-2 border-white shadow-lg" />
-            </div>
-          )}
-        </div>
-
-        {value && (
-          <button type="button" className="text-xs text-destructive underline" onClick={() => onChange(null)}>
-            Harita noktasını kaldır
-          </button>
-        )}
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Haritaya tıklayarak konum noktası seçin.
+          {value ? ` Seçili: (${value.x}, ${value.y})` : " Henüz nokta seçilmedi."}
+        </p>
+        {toolbar}
       </div>
+      {mapEl}
+      {value && (
+        <button type="button" className="text-xs text-destructive underline" onClick={handlePointRemove}>
+          Harita noktasını kaldır
+        </button>
+      )}
+      {fullscreenOverlay}
     </div>
   );
 }

@@ -103,11 +103,11 @@ export default function ReportsPage() {
 
       {/* Date Filter */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base sm:text-lg">Tarih Aralığı</CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-semibold">Tarih Aralığı</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
             <div className="space-y-2 flex-1">
               <Label htmlFor="from">Başlangıç</Label>
               <Input id="from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -128,40 +128,48 @@ export default function ReportsPage() {
         <div className="flex justify-center py-8"><Loading size={32} /></div>
       ) : summary ? (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <Clock className="w-8 h-8 text-primary shrink-0" />
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-2.5 rounded-xl bg-accent/10">
+                  <Clock className="w-6 h-6 text-accent shrink-0" />
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Toplam</p>
-                  <p className="text-xl sm:text-2xl font-bold">{summary.total}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Toplam</p>
+                  <p className="text-2xl font-bold">{summary.total}</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-amber-600 shrink-0" />
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30">
+                  <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Bekleyen</p>
-                  <p className="text-xl sm:text-2xl font-bold">{summary.pending}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bekleyen</p>
+                  <p className="text-2xl font-bold">{summary.pending}</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <CheckCircle className="w-8 h-8 text-emerald-600 shrink-0" />
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30">
+                  <CheckCircle className="w-6 h-6 text-emerald-600 shrink-0" />
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Tamamlanan</p>
-                  <p className="text-xl sm:text-2xl font-bold">{summary.completed}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tamamlanan</p>
+                  <p className="text-2xl font-bold">{summary.completed}</p>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <XCircle className="w-8 h-8 text-destructive shrink-0" />
+              <CardContent className="p-5 flex items-center gap-4">
+                <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/30">
+                  <XCircle className="w-6 h-6 text-destructive shrink-0" />
+                </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">İptal</p>
-                  <p className="text-xl sm:text-2xl font-bold">{summary.cancelled}</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">İptal</p>
+                  <p className="text-2xl font-bold">{summary.cancelled}</p>
                 </div>
               </CardContent>
             </Card>
@@ -170,13 +178,14 @@ export default function ReportsPage() {
           {/* Time Metrics + Pie Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Timer className="w-4 h-4 text-primary" /> Ort. Tepki Süresi
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl sm:text-3xl font-bold text-primary">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-accent/10">
+                    <Timer className="w-4 h-4 text-accent" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Ort. Tepki Süresi</p>
+                </div>
+                <p className="text-3xl font-bold text-accent">
                   {formatTime(summary.avgResponseTime)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -185,13 +194,14 @@ export default function ReportsPage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-600" /> Ort. Tamamlama Süresi
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl sm:text-3xl font-bold text-emerald-600">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground">Ort. Tamamlama Süresi</p>
+                </div>
+                <p className="text-3xl font-bold text-emerald-600">
                   {formatTime(summary.avgCompletionTime)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -201,10 +211,10 @@ export default function ReportsPage() {
             </Card>
             {pieData.length > 0 && (
               <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Durum Dağılımı</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-semibold">Durum Dağılımı</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -228,8 +238,8 @@ export default function ReportsPage() {
       {/* Driver Performance */}
       {driverStats.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Sürücü Performansı</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-semibold">Sürücü Performansi</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="h-60 sm:h-72">
@@ -248,11 +258,11 @@ export default function ReportsPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Sürücü</TableHead>
-                    <TableHead>Tamamlanan</TableHead>
-                    <TableHead>Ort. Tepki</TableHead>
-                    <TableHead>Ort. Tamamlama</TableHead>
+                  <TableRow className="bg-muted hover:bg-muted">
+                    <TableHead className="uppercase text-xs tracking-wider">Sürücü</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider">Tamamlanan</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider">Ort. Tepki</TableHead>
+                    <TableHead className="uppercase text-xs tracking-wider">Ort. Tamamlama</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -274,10 +284,10 @@ export default function ReportsPage() {
       {/* Location Stats */}
       {locationStats.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Konuma Göre Talepler</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base font-semibold">Konuma Gore Talepler</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <div className="h-60 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={locationStats} layout="vertical">

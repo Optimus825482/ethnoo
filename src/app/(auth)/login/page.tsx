@@ -10,13 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loading } from "@/components/ui/loading";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [errorModal, setErrorModal] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkSetup() {
@@ -52,7 +55,12 @@ export default function LoginPage() {
       const json = await res.json();
 
       if (!json.success) {
-        toast.error(json.error?.message || "Login failed");
+        const code = String(json.error?.code || "");
+        if (code.includes("AUTH_INVALID")) {
+          setErrorModal("Hatalı şifre girdiniz. Lütfen kontrol ederek yeniden deneyiniz.");
+        } else {
+          setErrorModal(json.error?.message || "Giriş başarısız");
+        }
         return;
       }
 
@@ -126,9 +134,23 @@ export default function LoginPage() {
               {loading ? <Loading size={16} /> : "Sign in"}
             </Button>
           </form>
-
         </CardContent>
       </Card>
+
+      {/* Error modal */}
+      <Dialog open={!!errorModal} onOpenChange={() => setErrorModal(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" /> Giriş Başarısız
+            </DialogTitle>
+            <DialogDescription>{errorModal}</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 justify-end">
+            <Button variant="default" onClick={() => setErrorModal(null)}>Tamam</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

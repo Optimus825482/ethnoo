@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, useMemo, useDeferredValue } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,7 +98,7 @@ function FieldRow({ label, fieldKey, value, onChange, icon: Icon }: {
   label: string; fieldKey: string; value: FieldMode; onChange: (k: string, v: FieldMode) => void; icon: React.ElementType;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-3">
       <Label className="text-sm flex items-center gap-1.5 shrink-0 min-w-[80px]">
         <Icon className="w-3.5 h-3.5" /> {label}
       </Label>
@@ -196,32 +196,35 @@ export default function GuestDesignPage() {
   if (loading) return <Loading fullPage />;
 
   return (
-    <div className="space-y-4 max-w-7xl">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-7xl">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Palette className="w-6 h-6" /> Misafir Sayfası Tasarımcısı</h1>
-          <p className="text-muted-foreground mt-1">QR kod okutunca misafirin göreceği sayfaları özelleştirin</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2"><Palette className="w-7 h-7" /> Misafir Sayfası Tasarımcısı</h1>
+          <p className="text-muted-foreground mt-1.5">QR kod okutunca misafirin göreceği sayfaları özelleştirin</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <Button variant="outline" onClick={() => { setConfig(defaultGuestPageConfig); toast.success("Varsayılana sıfırlandı"); }}>
-            <Undo2 className="w-4 h-4 mr-1" /> Sıfırla
+            <Undo2 className="w-4 h-4 mr-1.5" /> Sıfırla
           </Button>
-          <Button onClick={save} disabled={saving}><Save className="w-4 h-4 mr-1" />{saving ? "Kaydediliyor..." : "Kaydet"}</Button>
+          <Button onClick={save} disabled={saving}><Save className="w-4 h-4 mr-1.5" />{saving ? "Kaydediliyor..." : "Kaydet"}</Button>
         </div>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="w-full max-w-md">
-          <TabsTrigger value="call"><PhoneCall className="w-4 h-4 mr-1" />Çağrı Sayfası</TabsTrigger>
-          <TabsTrigger value="status"><Car className="w-4 h-4 mr-1" />Durum Sayfası</TabsTrigger>
+          <TabsTrigger value="call" className="gap-1.5"><PhoneCall className="w-4 h-4" />Çağrı Sayfası</TabsTrigger>
+          <TabsTrigger value="status" className="gap-1.5"><Car className="w-4 h-4" />Durum Sayfası</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="call" className="mt-4">
+        <TabsContent value="call" className="mt-6">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2 space-y-4">
+            <div className="xl:col-span-2 space-y-5">
+              {/* Header */}
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm flex items-center gap-2"><Eye className="w-4 h-4" /> Header</h3>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base flex items-center gap-2"><Eye className="w-4 h-4" /> Header</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center justify-between"><Label className="text-sm">Saat göstergesi</Label><Switch checked={config.showClock} onCheckedChange={(v) => updateField("showClock", v)} /></div>
                     <div className="flex items-center justify-between"><Label className="text-sm">Lokasyon adı</Label><Switch checked={config.locationName} onCheckedChange={(v) => updateField("locationName", v)} /></div>
@@ -231,18 +234,18 @@ export default function GuestDesignPage() {
                     <Label className="text-sm">Otel Logosu</Label>
                     <input ref={logoInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleLogoSelect} className="hidden" />
                     {logoPreview ? (
-                      <div className="flex items-center gap-2">
-                        <img src={logoPreview} alt="Logo" style={{ height: config.hotelLogoSize }} className="object-contain rounded-lg border" />
+                      <div className="flex items-center gap-3">
+                        <img src={logoPreview} alt="Logo" style={{ height: config.hotelLogoSize }} className="object-contain rounded-lg border border-border" />
                         <Button type="button" variant="ghost" size="icon" onClick={clearLogo}><X className="w-4 h-4 text-red-500" /></Button>
                       </div>
                     ) : (
                       <Button type="button" variant="outline" size="sm" onClick={() => logoInputRef.current?.click()}>
-                        <Upload className="w-4 h-4 mr-1" /> Logo Yükle
+                        <Upload className="w-4 h-4 mr-1.5" /> Logo Yükle
                       </Button>
                     )}
                     <p className="text-xs text-muted-foreground">PNG, JPG, WebP — maks. 500KB (base64 olarak kaydedilir)</p>
                     {logoPreview && (
-                      <div className="space-y-1.5 pt-2">
+                      <div className="space-y-2 pt-2">
                         <Label className="text-xs">Logo Boyutu: {config.hotelLogoSize}px</Label>
                         <input type="range" min={32} max={200} step={4} value={config.hotelLogoSize}
                           onChange={(e) => updateField("hotelLogoSize", Number(e.target.value))}
@@ -253,18 +256,22 @@ export default function GuestDesignPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Renkler */}
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm flex items-center gap-2"><Palette className="w-4 h-4" /> Renkler</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base flex items-center gap-2"><Palette className="w-4 h-4" /> Renkler</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     {(["bgStartColor", "bgEndColor", "headerTextColor", "accentColor"] as const).map((key) => {
                       const labelMap: Record<typeof key, string> = {bgStartColor: "Üst BG", bgEndColor: "Alt BG", headerTextColor: "Header Yazı", accentColor: "Vurgu"};
                       return (
-                      <div key={key} className="space-y-1">
+                      <div key={key} className="space-y-1.5">
                         <Label className="text-xs">{labelMap[key]}</Label>
-                        <div className="flex items-center gap-1.5">
-                          <input type="color" value={String(config[key])} onChange={(e) => updateField(key, e.target.value)} className="w-7 h-7 rounded border cursor-pointer" />
-                          <Input className="h-7 text-xs font-mono" defaultValue={String(config[key])} onBlur={(e) => updateField(key, e.target.value)} />
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={String(config[key])} onChange={(e) => updateField(key, e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer" />
+                          <Input className="h-8 text-xs font-mono" defaultValue={String(config[key])} onBlur={(e) => updateField(key, e.target.value)} />
                         </div>
                       </div>
                       );
@@ -272,16 +279,20 @@ export default function GuestDesignPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Form Alanları */}
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm flex items-center gap-2"><Type className="w-4 h-4" /> Form Alanları</h3>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base flex items-center gap-2"><Type className="w-4 h-4" /> Form Alanları</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div className="space-y-4">
                     <FieldRow label="Misafir Adı" fieldKey="guestName" value={config.fields.guestName} onChange={updateFieldMode} icon={User} />
                     <FieldRow label="Oda No" fieldKey="roomNumber" value={config.fields.roomNumber} onChange={updateFieldMode} icon={DoorOpen} />
                     <FieldRow label="Telefon" fieldKey="phone" value={config.fields.phone} onChange={updateFieldMode} icon={Phone} />
                   </div>
                   {config.customFields.map((f) => (
-                    <div key={f.id} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
+                    <div key={f.id} className="flex items-center gap-2 p-2.5 bg-muted/30 rounded-lg border border-border/50">
                       <Input className="h-8 text-xs flex-1" placeholder="Alan adı" value={f.label} onChange={(e) => updateCustomField(f.id, { label: e.target.value })} />
                       <Input className="h-8 text-xs w-24" placeholder="Placeholder" value={f.placeholder} onChange={(e) => updateCustomField(f.id, { placeholder: e.target.value })} />
                       <Select value={f.mode} onValueChange={(v) => updateCustomField(f.id, { mode: v as FieldMode })}>
@@ -291,32 +302,40 @@ export default function GuestDesignPage() {
                       <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeCustomField(f.id)}><Trash2 className="w-3.5 h-3.5 text-red-500" /></Button>
                     </div>
                   ))}
-                  <Button variant="outline" size="sm" onClick={addCustomField}><Plus className="w-3.5 h-3.5 mr-1" /> Özel Alan Ekle</Button>
+                  <Button variant="outline" size="sm" onClick={addCustomField}><Plus className="w-3.5 h-3.5 mr-1.5" /> Özel Alan Ekle</Button>
                 </CardContent>
               </Card>
+
+              {/* Çağrı Butonu */}
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm">🔘 Çağrı Butonu</h3>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base">Çağrı Butonu</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5"><Label className="text-xs">Metin</Label><Input className="h-8 text-sm" value={config.buttonText} onChange={(e) => updateField("buttonText", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Renk</Label><div className="flex items-center gap-1.5"><input type="color" value={config.buttonColor} onChange={(e) => updateField("buttonColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.buttonColor} onBlur={(e) => updateField("buttonColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Renk</Label><div className="flex items-center gap-2"><input type="color" value={config.buttonColor} onChange={(e) => updateField("buttonColor", e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer" /><Input className="h-8 text-xs font-mono" defaultValue={config.buttonColor} onBlur={(e) => updateField("buttonColor", e.target.value)} /></div></div>
                     <div className="space-y-1.5"><Label className="text-xs">Şekil</Label><Select value={config.buttonShape} onValueChange={(v) => updateField("buttonShape", v)}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="rounded">Yuvarlak</SelectItem><SelectItem value="pill">Tam Yuvarlak</SelectItem></SelectContent></Select></div>
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Footer */}
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm">Footer</h3>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base">Footer</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5"><Label className="text-xs">Metin</Label><Input className="h-8 text-sm" value={config.footerText} onChange={(e) => updateField("footerText", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">BG Rengi</Label><div className="flex items-center gap-1.5"><input type="color" value={config.footerBgColor} onChange={(e) => updateField("footerBgColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerBgColor} onBlur={(e) => updateField("footerBgColor", e.target.value)} /></div></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Yazı Rengi</Label><div className="flex items-center gap-1.5"><input type="color" value={config.footerTextColor} onChange={(e) => updateField("footerTextColor", e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={config.footerTextColor} onBlur={(e) => updateField("footerTextColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">BG Rengi</Label><div className="flex items-center gap-2"><input type="color" value={config.footerBgColor} onChange={(e) => updateField("footerBgColor", e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer" /><Input className="h-8 text-xs font-mono" defaultValue={config.footerBgColor} onBlur={(e) => updateField("footerBgColor", e.target.value)} /></div></div>
+                    <div className="space-y-1.5"><Label className="text-xs">Yazı Rengi</Label><div className="flex items-center gap-2"><input type="color" value={config.footerTextColor} onChange={(e) => updateField("footerTextColor", e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer" /><Input className="h-8 text-xs font-mono" defaultValue={config.footerTextColor} onBlur={(e) => updateField("footerTextColor", e.target.value)} /></div></div>
                   </div>
                 </CardContent>
               </Card>
             </div>
             <div className="xl:col-span-1">
-              <div className="sticky top-4">
+              <div className="sticky top-6">
                 <div className="flex items-center gap-2 mb-3"><Smartphone className="w-4 h-4" /><span className="text-sm font-semibold">Mobil Önizleme</span></div>
                 {callPreview}
               </div>
@@ -324,32 +343,36 @@ export default function GuestDesignPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="status" className="mt-4">
+        <TabsContent value="status" className="mt-6">
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div className="xl:col-span-2">
+            <div className="xl:col-span-2 space-y-5">
               <Card>
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm flex items-center gap-2"><Car className="w-4 h-4" /> Sürücü & Araç Bilgisi</h3>
-                  <div className="space-y-3">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base flex items-center gap-2"><Car className="w-4 h-4" /> Sürücü ve Araç Bilgisi</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between"><Label className="text-sm">Sürücü adını göster</Label><Switch checked={config.showDriverName} onCheckedChange={(v) => updateField("showDriverName", v)} /></div>
                     <div className="flex items-center justify-between"><Label className="text-sm">Sürücü konumunu göster</Label><Switch checked={config.showDriverLocation} onCheckedChange={(v) => updateField("showDriverLocation", v)} /></div>
                     <div className="flex items-center justify-between"><Label className="text-sm">Araç kodunu göster</Label><Switch checked={config.showBuggyCode} onCheckedChange={(v) => updateField("showBuggyCode", v)} /></div>
                   </div>
                 </CardContent>
               </Card>
-              <Card className="mt-4">
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="font-semibold text-sm flex items-center gap-2"><Palette className="w-4 h-4" /> Durum Sayfası Renkleri</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base flex items-center gap-2"><Palette className="w-4 h-4" /> Durum Sayfası Renkleri</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {([{ k: "bgStartColor", l: "Üst BG" }, { k: "bgEndColor", l: "Alt BG" }, { k: "headerTextColor", l: "Yazı" }] as Array<{k: keyof GuestPageConfig, l: string}>).map(({ k, l }) => (
-                      <div key={k} className="space-y-1"><Label className="text-xs">{l}</Label><div className="flex items-center gap-1.5"><input type="color" value={String(config[k])} onChange={(e) => updateField(k, e.target.value)} className="w-7 h-7 rounded border" /><Input className="h-7 text-xs font-mono" defaultValue={String(config[k])} onBlur={(e) => updateField(k, e.target.value)} /></div></div>
+                      <div key={k} className="space-y-1.5"><Label className="text-xs">{l}</Label><div className="flex items-center gap-2"><input type="color" value={String(config[k])} onChange={(e) => updateField(k, e.target.value)} className="w-8 h-8 rounded-lg border border-border cursor-pointer" /><Input className="h-8 text-xs font-mono" defaultValue={String(config[k])} onBlur={(e) => updateField(k, e.target.value)} /></div></div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
             </div>
             <div className="xl:col-span-1">
-              <div className="sticky top-4">
+              <div className="sticky top-6">
                 <div className="flex items-center gap-2 mb-3"><Smartphone className="w-4 h-4" /><span className="text-sm font-semibold">Mobil Önizleme</span></div>
                 {statusPreview}
               </div>

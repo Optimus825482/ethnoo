@@ -160,6 +160,13 @@ interface SceneCtx {
   resetCamTop: () => void;
 }
 
+export interface MonitorMapControls {
+  viewLocked: boolean;
+  toggleViewLock: () => void;
+  vehicleSize: number;
+  setVehicleSize: (n: number) => void;
+}
+
 export function MonitorMap3D({
   locations,
   buggies,
@@ -167,6 +174,7 @@ export function MonitorMap3D({
   selection,
   onSelect,
   mapUrl,
+  controls,
 }: {
   locations: MapLocation[];
   buggies: MapBuggy[];
@@ -174,11 +182,11 @@ export function MonitorMap3D({
   selection: MapSelection;
   onSelect?: (sel: MapSelection) => void;
   mapUrl?: string | null;
+  controls?: (c: MonitorMapControls) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const ctxRef = useRef<SceneCtx | null>(null);
   const [viewLocked, setViewLocked] = useState(true);
-  const [panelHidden, setPanelHidden] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [vehicleSize, setVehicleSize] = useState(1.75);
   const [speedFactor, setSpeedFactor] = useState(0.5);
@@ -448,59 +456,20 @@ export function MonitorMap3D({
     onSelect(null);
   }, [onSelect]);
 
+  useEffect(() => {
+    controls?.({
+      viewLocked,
+      toggleViewLock: () => ctxRef.current?.toggleViewLock(),
+      vehicleSize,
+      setVehicleSize: (n: number) => setVehicleSize(n),
+    });
+  }, [controls, viewLocked, vehicleSize]);
+
   return (
     <div className="relative w-full h-full" style={{ minHeight: "600px" }}>
       <div ref={containerRef} onClick={handleClick}
            className={`w-full h-full ${viewLocked ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing"}`} />
 
-      {/* help hint — üstte */}
-      <div className={`absolute top-3 left-3 z-10 transition-opacity duration-300 pointer-events-none ${panelHidden ? "opacity-0" : "opacity-100"}`}>
-        <div className="bg-black/60 backdrop-blur-md rounded-xl px-3 py-2 border border-white/10 text-white/80 text-xs leading-relaxed max-w-[420px]">
-          🖱️ Mouse: döndür · tekerlek: zoom · sağ/sol sürükle: pan · Shift+sürükle: pan
-        </div>
-      </div>
-
-      {/* controls bar */}
-      <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 z-10 transition-all duration-300 pointer-events-auto ${panelHidden ? "translate-y-24 opacity-0 pointer-events-none" : "opacity-100"}`}>
-        <div className="flex flex-wrap items-center justify-center gap-2 bg-black/65 backdrop-blur-md rounded-2xl px-3 py-2 border border-white/10 max-w-[min(980px,calc(100vw-2rem))]">
-          <button onClick={() => ctxRef.current?.toggleViewLock()}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-colors ${viewLocked ? "bg-yellow-500 text-black border-yellow-400" : "bg-white/10 text-white border-white/20 hover:bg-white/20"}`}>
-            {viewLocked ? "🔒 Kilitli" : "🔓 Görünümü Kilitle"}
-          </button>
-          <button onClick={() => { if (ctxRef.current && !ctxRef.current.viewLocked) ctxRef.current.resetCam3D(); }}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">
-            3D Kamera
-          </button>
-          <button onClick={() => { if (ctxRef.current && !ctxRef.current.viewLocked) ctxRef.current.resetCamTop(); }}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">
-            Üstten 2D
-          </button>
-          <button onClick={() => setShowPins((v) => !v)}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">
-            {showPins ? "Pinleri Gizle" : "Pinleri Göster"}
-          </button>
-          <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20">
-            Hız
-            <input className="w-20 accent-emerald-400" type="range" min="0.25" max="2.5" step="0.05" value={speedFactor} onChange={(e) => setSpeedFactor(Number(e.target.value))} />
-            <span className="tabular-nums">{speedFactor.toFixed(2)}×</span>
-          </label>
-          <label className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20">
-            Boyut
-            <input className="w-24 accent-emerald-400" type="range" min="0.45" max="3" step="0.05" value={vehicleSize} onChange={(e) => setVehicleSize(Number(e.target.value))} />
-            <span className="tabular-nums">{vehicleSize.toFixed(2)}×</span>
-          </label>
-          <button onClick={() => setPanelHidden(true)}
-                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/10 text-white border border-white/20 hover:bg-white/20">
-            Paneli Gizle
-          </button>
-        </div>
-      </div>
-      {panelHidden && (
-        <button onClick={() => setPanelHidden(false)}
-                className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 text-xs font-bold rounded-full bg-emerald-300 text-emerald-950 shadow-lg pointer-events-auto">
-          Paneli Göster
-        </button>
-      )}
     </div>
   );
 }
