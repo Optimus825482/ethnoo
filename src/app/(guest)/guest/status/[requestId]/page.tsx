@@ -29,7 +29,7 @@ interface RequestDetail {
 export default function GuestStatusPage() {
   const params = useParams();
   const requestId = params.requestId as string;
-  const [capability, setCapability] = useState<string | undefined>(undefined);
+  const [capability, setCapability] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
     const urlCap = new URLSearchParams(window.location.search).get("capability");
@@ -38,12 +38,12 @@ export default function GuestStatusPage() {
       window.history.replaceState(null, "", window.location.pathname);
       setCapability(urlCap);
     } else {
-      setCapability(guestCapabilityStorage.get(requestId) || undefined);
+      setCapability(guestCapabilityStorage.get(requestId));
     }
   }, [requestId]);
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const missingCapability = !capability && capability !== undefined;
+  const missingCapability = capability === null;
   const [cancelling, setCancelling] = useState(false);
   const [locale, setLocaleState] = useState<SupportedLocale>(getInitialLocale);
 
@@ -107,6 +107,8 @@ export default function GuestStatusPage() {
 
     async function connect() {
       if (cancelled || terminal) return;
+      es?.close();
+      es = null;
       try {
         const response = await fetch(`/api/requests/${requestId}/sse-ticket`, {
           method: "POST",
