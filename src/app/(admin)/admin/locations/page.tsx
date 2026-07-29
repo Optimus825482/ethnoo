@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,7 @@ interface Location {
 
 export default function LocationsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const isNew = searchParams.get("new") === "true";
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,40 +259,21 @@ export default function LocationsPage() {
       {/* Map upload prerequisite card — show when no map */}
       {!mapUrl && (
         <Card>
-          <CardContent className="p-10">
-            <div className="flex flex-col items-center text-center gap-5">
-              <div className="rounded-full bg-accent/10 p-5">
-                <MapIcon className="w-12 h-12 text-accent" />
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="rounded-full bg-accent/10 p-4">
+                <MapIcon className="w-10 h-10 text-accent" />
               </div>
               <div>
-                <h3 className="text-lg font-bold tracking-tight">Adım 1: Otel Haritasını Yükleyin</h3>
+                <h3 className="text-lg font-bold tracking-tight">Otel Haritası Gerekli</h3>
                 <p className="text-sm text-muted-foreground mt-2 max-w-md">
-                  Konum eklemeye başlamadan önce otel yerleşke haritasını yükleyin.
-                  Harita PNG, JPG veya WebP formatında, maksimum 5MB olmalıdır.
+                  Konum eklemek için önce otel haritasını yüklemelisiniz.
+                  <strong> Ayarlar → Otel Profili</strong> sayfasından harita yükleyebilirsiniz.
                 </p>
               </div>
-              <div>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  id="map-upload-input"
-                  onChange={async (e) => {
-                    const f = e.target.files?.[0];
-                    if (!f) return;
-                    if (f.size > 5 * 1024 * 1024) { toast.error("Dosya çok büyük (maks 5MB)"); return; }
-                    await handleMapUpload(f);
-                  }}
-                />
-                <Button
-                  size="lg"
-                  onClick={() => document.getElementById("map-upload-input")?.click()}
-                  disabled={mapUploading}
-                >
-                  {mapUploading ? <Loading size={16} /> : <Upload className="w-4 h-4 mr-2" />}
-                  Harita Yükle
-                </Button>
-              </div>
+              <Button size="lg" variant="default" onClick={() => router.push("/admin/settings")}>
+                Ayarlara Git
+              </Button>
             </div>
           </CardContent>
         </Card>
