@@ -137,7 +137,7 @@ export default function GuestStatusPage() {
       stop();
       stopTransportRef.current = () => {};
     };
-  }, [requestId]);
+  }, [requestId, capability]);
 
   async function handleCancel() {
     if (cancelling) return;
